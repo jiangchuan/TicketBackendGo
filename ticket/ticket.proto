@@ -6,18 +6,37 @@ option java_outer_classname = "TicketProto";
 
 package ticket;
 
-// The greeting service definition.
-service Greeter {
-  // Sends a greeting
-  rpc SayHello (HelloRequest) returns (HelloReply) {}
+service Ticket {
+  rpc CreateAccount (AccountRequest) returns (AccountReply) {}
+  rpc Login (LoginRequest) returns (LoginReply) {}
 }
 
-// The request message containing the user's name.
-message HelloRequest {
-  string name = 1;
+message AccountRequest {
+  string user_id = 1;
+  string password = 2;
+  string police_name = 3;
+  string police_type = 4;
+  string police_city = 5;
+  string police_dept = 6;
+  string police_station = 7;
+  bytes police_portrait = 8;
 }
 
-// The response message containing the greetings
-message HelloReply {
-  string message = 1;
+message AccountReply {
+  bool create_success = 1;
+}
+
+message LoginRequest {
+  string user_id = 1;
+  string password = 2;
+}
+
+message LoginReply {
+  bool login_success = 1;
+  string police_name = 2;
+  string police_type = 3;
+  string police_city = 4;
+  string police_dept = 5;
+  string police_station = 6;
+  bytes police_portrait = 7;
 }

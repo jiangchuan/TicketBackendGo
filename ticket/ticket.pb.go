@@ -9,8 +9,10 @@ It is generated from these files:
 	ticket.proto
 
 It has these top-level messages:
-	HelloRequest
-	HelloReply
+	AccountRequest
+	AccountReply
+	LoginRequest
+	LoginReply
 */
 package ticket
 
@@ -34,43 +36,187 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.ProtoPackageIsVersion2 // please upgrade the proto package
 
-// The request message containing the user's name.
-type HelloRequest struct {
-	Name string `protobuf:"bytes,1,opt,name=name" json:"name,omitempty"`
+type AccountRequest struct {
+	UserId         string `protobuf:"bytes,1,opt,name=user_id,json=userId" json:"user_id,omitempty"`
+	Password       string `protobuf:"bytes,2,opt,name=password" json:"password,omitempty"`
+	PoliceName     string `protobuf:"bytes,3,opt,name=police_name,json=policeName" json:"police_name,omitempty"`
+	PoliceType     string `protobuf:"bytes,4,opt,name=police_type,json=policeType" json:"police_type,omitempty"`
+	PoliceCity     string `protobuf:"bytes,5,opt,name=police_city,json=policeCity" json:"police_city,omitempty"`
+	PoliceDept     string `protobuf:"bytes,6,opt,name=police_dept,json=policeDept" json:"police_dept,omitempty"`
+	PoliceStation  string `protobuf:"bytes,7,opt,name=police_station,json=policeStation" json:"police_station,omitempty"`
+	PolicePortrait []byte `protobuf:"bytes,8,opt,name=police_portrait,json=policePortrait,proto3" json:"police_portrait,omitempty"`
 }
 
-func (m *HelloRequest) Reset()                    { *m = HelloRequest{} }
-func (m *HelloRequest) String() string            { return proto.CompactTextString(m) }
-func (*HelloRequest) ProtoMessage()               {}
-func (*HelloRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
+func (m *AccountRequest) Reset()                    { *m = AccountRequest{} }
+func (m *AccountRequest) String() string            { return proto.CompactTextString(m) }
+func (*AccountRequest) ProtoMessage()               {}
+func (*AccountRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{0} }
 
-func (m *HelloRequest) GetName() string {
+func (m *AccountRequest) GetUserId() string {
 	if m != nil {
-		return m.Name
+		return m.UserId
 	}
 	return ""
 }
 
-// The response message containing the greetings
-type HelloReply struct {
-	Message string `protobuf:"bytes,1,opt,name=message" json:"message,omitempty"`
-}
-
-func (m *HelloReply) Reset()                    { *m = HelloReply{} }
-func (m *HelloReply) String() string            { return proto.CompactTextString(m) }
-func (*HelloReply) ProtoMessage()               {}
-func (*HelloReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
-
-func (m *HelloReply) GetMessage() string {
+func (m *AccountRequest) GetPassword() string {
 	if m != nil {
-		return m.Message
+		return m.Password
 	}
 	return ""
+}
+
+func (m *AccountRequest) GetPoliceName() string {
+	if m != nil {
+		return m.PoliceName
+	}
+	return ""
+}
+
+func (m *AccountRequest) GetPoliceType() string {
+	if m != nil {
+		return m.PoliceType
+	}
+	return ""
+}
+
+func (m *AccountRequest) GetPoliceCity() string {
+	if m != nil {
+		return m.PoliceCity
+	}
+	return ""
+}
+
+func (m *AccountRequest) GetPoliceDept() string {
+	if m != nil {
+		return m.PoliceDept
+	}
+	return ""
+}
+
+func (m *AccountRequest) GetPoliceStation() string {
+	if m != nil {
+		return m.PoliceStation
+	}
+	return ""
+}
+
+func (m *AccountRequest) GetPolicePortrait() []byte {
+	if m != nil {
+		return m.PolicePortrait
+	}
+	return nil
+}
+
+type AccountReply struct {
+	CreateSuccess bool `protobuf:"varint,1,opt,name=create_success,json=createSuccess" json:"create_success,omitempty"`
+}
+
+func (m *AccountReply) Reset()                    { *m = AccountReply{} }
+func (m *AccountReply) String() string            { return proto.CompactTextString(m) }
+func (*AccountReply) ProtoMessage()               {}
+func (*AccountReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{1} }
+
+func (m *AccountReply) GetCreateSuccess() bool {
+	if m != nil {
+		return m.CreateSuccess
+	}
+	return false
+}
+
+type LoginRequest struct {
+	UserId   string `protobuf:"bytes,1,opt,name=user_id,json=userId" json:"user_id,omitempty"`
+	Password string `protobuf:"bytes,2,opt,name=password" json:"password,omitempty"`
+}
+
+func (m *LoginRequest) Reset()                    { *m = LoginRequest{} }
+func (m *LoginRequest) String() string            { return proto.CompactTextString(m) }
+func (*LoginRequest) ProtoMessage()               {}
+func (*LoginRequest) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{2} }
+
+func (m *LoginRequest) GetUserId() string {
+	if m != nil {
+		return m.UserId
+	}
+	return ""
+}
+
+func (m *LoginRequest) GetPassword() string {
+	if m != nil {
+		return m.Password
+	}
+	return ""
+}
+
+type LoginReply struct {
+	LoginSuccess   bool   `protobuf:"varint,1,opt,name=login_success,json=loginSuccess" json:"login_success,omitempty"`
+	PoliceName     string `protobuf:"bytes,2,opt,name=police_name,json=policeName" json:"police_name,omitempty"`
+	PoliceType     string `protobuf:"bytes,3,opt,name=police_type,json=policeType" json:"police_type,omitempty"`
+	PoliceCity     string `protobuf:"bytes,4,opt,name=police_city,json=policeCity" json:"police_city,omitempty"`
+	PoliceDept     string `protobuf:"bytes,5,opt,name=police_dept,json=policeDept" json:"police_dept,omitempty"`
+	PoliceStation  string `protobuf:"bytes,6,opt,name=police_station,json=policeStation" json:"police_station,omitempty"`
+	PolicePortrait []byte `protobuf:"bytes,7,opt,name=police_portrait,json=policePortrait,proto3" json:"police_portrait,omitempty"`
+}
+
+func (m *LoginReply) Reset()                    { *m = LoginReply{} }
+func (m *LoginReply) String() string            { return proto.CompactTextString(m) }
+func (*LoginReply) ProtoMessage()               {}
+func (*LoginReply) Descriptor() ([]byte, []int) { return fileDescriptor0, []int{3} }
+
+func (m *LoginReply) GetLoginSuccess() bool {
+	if m != nil {
+		return m.LoginSuccess
+	}
+	return false
+}
+
+func (m *LoginReply) GetPoliceName() string {
+	if m != nil {
+		return m.PoliceName
+	}
+	return ""
+}
+
+func (m *LoginReply) GetPoliceType() string {
+	if m != nil {
+		return m.PoliceType
+	}
+	return ""
+}
+
+func (m *LoginReply) GetPoliceCity() string {
+	if m != nil {
+		return m.PoliceCity
+	}
+	return ""
+}
+
+func (m *LoginReply) GetPoliceDept() string {
+	if m != nil {
+		return m.PoliceDept
+	}
+	return ""
+}
+
+func (m *LoginReply) GetPoliceStation() string {
+	if m != nil {
+		return m.PoliceStation
+	}
+	return ""
+}
+
+func (m *LoginReply) GetPolicePortrait() []byte {
+	if m != nil {
+		return m.PolicePortrait
+	}
+	return nil
 }
 
 func init() {
-	proto.RegisterType((*HelloRequest)(nil), "ticket.HelloRequest")
-	proto.RegisterType((*HelloReply)(nil), "ticket.HelloReply")
+	proto.RegisterType((*AccountRequest)(nil), "ticket.AccountRequest")
+	proto.RegisterType((*AccountReply)(nil), "ticket.AccountReply")
+	proto.RegisterType((*LoginRequest)(nil), "ticket.LoginRequest")
+	proto.RegisterType((*LoginReply)(nil), "ticket.LoginReply")
 }
 
 // Reference imports to suppress errors if they are not otherwise used.
@@ -81,66 +227,97 @@ var _ grpc.ClientConn
 // is compatible with the grpc package it is being compiled against.
 const _ = grpc.SupportPackageIsVersion4
 
-// Client API for Greeter service
+// Client API for Ticket service
 
-type GreeterClient interface {
-	// Sends a greeting
-	SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error)
+type TicketClient interface {
+	CreateAccount(ctx context.Context, in *AccountRequest, opts ...grpc.CallOption) (*AccountReply, error)
+	Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginReply, error)
 }
 
-type greeterClient struct {
+type ticketClient struct {
 	cc *grpc.ClientConn
 }
 
-func NewGreeterClient(cc *grpc.ClientConn) GreeterClient {
-	return &greeterClient{cc}
+func NewTicketClient(cc *grpc.ClientConn) TicketClient {
+	return &ticketClient{cc}
 }
 
-func (c *greeterClient) SayHello(ctx context.Context, in *HelloRequest, opts ...grpc.CallOption) (*HelloReply, error) {
-	out := new(HelloReply)
-	err := grpc.Invoke(ctx, "/ticket.Greeter/SayHello", in, out, c.cc, opts...)
+func (c *ticketClient) CreateAccount(ctx context.Context, in *AccountRequest, opts ...grpc.CallOption) (*AccountReply, error) {
+	out := new(AccountReply)
+	err := grpc.Invoke(ctx, "/ticket.Ticket/CreateAccount", in, out, c.cc, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// Server API for Greeter service
-
-type GreeterServer interface {
-	// Sends a greeting
-	SayHello(context.Context, *HelloRequest) (*HelloReply, error)
+func (c *ticketClient) Login(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*LoginReply, error) {
+	out := new(LoginReply)
+	err := grpc.Invoke(ctx, "/ticket.Ticket/Login", in, out, c.cc, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
-func RegisterGreeterServer(s *grpc.Server, srv GreeterServer) {
-	s.RegisterService(&_Greeter_serviceDesc, srv)
+// Server API for Ticket service
+
+type TicketServer interface {
+	CreateAccount(context.Context, *AccountRequest) (*AccountReply, error)
+	Login(context.Context, *LoginRequest) (*LoginReply, error)
 }
 
-func _Greeter_SayHello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HelloRequest)
+func RegisterTicketServer(s *grpc.Server, srv TicketServer) {
+	s.RegisterService(&_Ticket_serviceDesc, srv)
+}
+
+func _Ticket_CreateAccount_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AccountRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GreeterServer).SayHello(ctx, in)
+		return srv.(TicketServer).CreateAccount(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/ticket.Greeter/SayHello",
+		FullMethod: "/ticket.Ticket/CreateAccount",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GreeterServer).SayHello(ctx, req.(*HelloRequest))
+		return srv.(TicketServer).CreateAccount(ctx, req.(*AccountRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-var _Greeter_serviceDesc = grpc.ServiceDesc{
-	ServiceName: "ticket.Greeter",
-	HandlerType: (*GreeterServer)(nil),
+func _Ticket_Login_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(LoginRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TicketServer).Login(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/ticket.Ticket/Login",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TicketServer).Login(ctx, req.(*LoginRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+var _Ticket_serviceDesc = grpc.ServiceDesc{
+	ServiceName: "ticket.Ticket",
+	HandlerType: (*TicketServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "SayHello",
-			Handler:    _Greeter_SayHello_Handler,
+			MethodName: "CreateAccount",
+			Handler:    _Ticket_CreateAccount_Handler,
+		},
+		{
+			MethodName: "Login",
+			Handler:    _Ticket_Login_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
@@ -150,16 +327,29 @@ var _Greeter_serviceDesc = grpc.ServiceDesc{
 func init() { proto.RegisterFile("ticket.proto", fileDescriptor0) }
 
 var fileDescriptor0 = []byte{
-	// 163 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xe2, 0xe2, 0x29, 0xc9, 0x4c, 0xce,
-	0x4e, 0x2d, 0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x83, 0xf0, 0x94, 0x94, 0xb8, 0x78,
-	0x3c, 0x52, 0x73, 0x72, 0xf2, 0x83, 0x52, 0x0b, 0x4b, 0x53, 0x8b, 0x4b, 0x84, 0x84, 0xb8, 0x58,
-	0xf2, 0x12, 0x73, 0x53, 0x25, 0x18, 0x15, 0x18, 0x35, 0x38, 0x83, 0xc0, 0x6c, 0x25, 0x35, 0x2e,
-	0x2e, 0xa8, 0x9a, 0x82, 0x9c, 0x4a, 0x21, 0x09, 0x2e, 0xf6, 0xdc, 0xd4, 0xe2, 0xe2, 0xc4, 0x74,
-	0x98, 0x22, 0x18, 0xd7, 0xc8, 0x91, 0x8b, 0xdd, 0xbd, 0x28, 0x35, 0xb5, 0x24, 0xb5, 0x48, 0xc8,
-	0x8c, 0x8b, 0x23, 0x38, 0xb1, 0x12, 0xac, 0x4b, 0x48, 0x44, 0x0f, 0x6a, 0x33, 0xb2, 0x45, 0x52,
-	0x42, 0x68, 0xa2, 0x05, 0x39, 0x95, 0x4a, 0x0c, 0x4e, 0x0a, 0x5c, 0xfc, 0x99, 0xf9, 0x7a, 0xc9,
-	0x19, 0x99, 0x55, 0x99, 0x50, 0x79, 0x27, 0xee, 0x10, 0x30, 0x1d, 0x00, 0x72, 0x76, 0x00, 0x63,
-	0x12, 0x1b, 0xd8, 0xfd, 0xc6, 0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0x7e, 0x96, 0xd6, 0xc3, 0xcf,
-	0x00, 0x00, 0x00,
+	// 373 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xa4, 0x93, 0x41, 0x6b, 0xe3, 0x30,
+	0x10, 0x85, 0xd7, 0x4e, 0xe2, 0x64, 0x27, 0x76, 0x02, 0x62, 0xd9, 0x15, 0xb9, 0x6c, 0xf0, 0xb2,
+	0x34, 0xa7, 0x1c, 0x1a, 0x7a, 0x2e, 0x4d, 0x7a, 0x29, 0x94, 0x12, 0x9c, 0xdc, 0x83, 0x2b, 0x8b,
+	0x56, 0xd4, 0xb1, 0x54, 0x6b, 0x4c, 0x71, 0x0f, 0xbd, 0xf5, 0x47, 0xf4, 0xdf, 0x16, 0xcb, 0x22,
+	0xb8, 0x69, 0x21, 0x81, 0x1e, 0xe7, 0xcd, 0x27, 0x8d, 0x78, 0x6f, 0x04, 0x3e, 0x0a, 0xf6, 0xc0,
+	0x71, 0xaa, 0x72, 0x89, 0x92, 0x78, 0x75, 0x15, 0xbe, 0xb9, 0x30, 0xb8, 0x60, 0x4c, 0x16, 0x19,
+	0x46, 0xfc, 0xb1, 0xe0, 0x1a, 0xc9, 0x1f, 0xe8, 0x16, 0x9a, 0xe7, 0x1b, 0x91, 0x50, 0x67, 0xec,
+	0x4c, 0x7e, 0x46, 0x5e, 0x55, 0x5e, 0x25, 0x64, 0x04, 0x3d, 0x15, 0x6b, 0xfd, 0x24, 0xf3, 0x84,
+	0xba, 0xa6, 0xb3, 0xab, 0xc9, 0x5f, 0xe8, 0x2b, 0x99, 0x0a, 0xc6, 0x37, 0x59, 0xbc, 0xe5, 0xb4,
+	0x65, 0xda, 0x50, 0x4b, 0x37, 0xf1, 0x96, 0x37, 0x00, 0x2c, 0x15, 0xa7, 0xed, 0x26, 0xb0, 0x2e,
+	0x55, 0x13, 0x60, 0x02, 0x4b, 0xda, 0x69, 0x02, 0x0b, 0x81, 0x65, 0x03, 0x48, 0xb8, 0x42, 0xea,
+	0x35, 0x81, 0x4b, 0xae, 0x90, 0xfc, 0x87, 0x81, 0x05, 0x34, 0xc6, 0x28, 0x64, 0x46, 0xbb, 0x86,
+	0x09, 0x6a, 0x75, 0x55, 0x8b, 0xe4, 0x04, 0x86, 0x16, 0x53, 0x32, 0xc7, 0x3c, 0x16, 0x48, 0x7b,
+	0x63, 0x67, 0xe2, 0x47, 0xf6, 0xf4, 0xd2, 0xaa, 0xe1, 0x19, 0xf8, 0x3b, 0x6b, 0x54, 0x5a, 0x56,
+	0xf7, 0xb3, 0x9c, 0xc7, 0xc8, 0x37, 0xba, 0x60, 0x8c, 0x6b, 0x6d, 0xfc, 0xe9, 0x45, 0x41, 0xad,
+	0xae, 0x6a, 0x31, 0x5c, 0x80, 0x7f, 0x2d, 0xef, 0x44, 0xf6, 0x1d, 0x3f, 0xc3, 0x57, 0x17, 0xc0,
+	0xde, 0x52, 0x8d, 0xfe, 0x07, 0x41, 0x5a, 0x55, 0x7b, 0x93, 0x7d, 0x23, 0xda, 0xc1, 0xfb, 0x19,
+	0xb8, 0x87, 0x32, 0x68, 0x1d, 0xca, 0xa0, 0x7d, 0x28, 0x83, 0xce, 0x11, 0x19, 0x78, 0x47, 0x66,
+	0xd0, 0xfd, 0x2a, 0x83, 0xd3, 0x17, 0xf0, 0xd6, 0x66, 0x53, 0xc9, 0x39, 0x04, 0x0b, 0xe3, 0xb3,
+	0xcd, 0x84, 0xfc, 0x9e, 0xda, 0x8d, 0xfe, 0xb8, 0xbf, 0xa3, 0x5f, 0x9f, 0x74, 0x95, 0x96, 0xe1,
+	0x0f, 0x32, 0x83, 0x8e, 0x71, 0x94, 0xec, 0x80, 0x66, 0x4c, 0x23, 0xb2, 0xa7, 0x9a, 0x43, 0xf3,
+	0x31, 0x0c, 0x85, 0x9c, 0xb2, 0x7b, 0xf1, 0x2c, 0x6c, 0x7f, 0xde, 0xaf, 0x1f, 0xb4, 0xac, 0xfe,
+	0xd1, 0xd2, 0xb9, 0xf5, 0xcc, 0x87, 0x9a, 0xbd, 0x07, 0x00, 0x00, 0xff, 0xff, 0xa2, 0x69, 0xbb,
+	0xe1, 0x60, 0x03, 0x00, 0x00,
 }
