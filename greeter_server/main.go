@@ -41,11 +41,15 @@ import (
 	"google.golang.org/grpc"
 	pb "../ticket"
 	"google.golang.org/grpc/reflection"
+
+	"gopkg.in/mgo.v2"
 )
 
 const (
 	port = ":50051"
 )
+
+var dbSession *mgo.Session
 
 // server is used to implement ticket.TicketServer.
 type server struct{}
@@ -54,12 +58,80 @@ func (s *server) Login(ctx context.Context, in *pb.LoginRequest) (*pb.LoginReply
 	return &pb.LoginReply{PoliceName: "Login " + in.UserId}, nil
 }
 
-func (s *server) CreateAccount(ctx context.Context, in *pb.AccountRequest) (*pb.AccountReply, error) {
-	return &pb.AccountReply{CreateSuccess: false}, nil
+func (s *server) CreateAccount(ctx context.Context, policeInfo *pb.AccountRequest) (*pb.AccountReply, error) {
+
+	// TODO: save "in" to database
+	session := dbSession.Copy()
+	defer session.Close()
+
+	c := session.DB("police").C("policedocs")
+	err := c.Insert(&PoliceDoc{UserID: policeInfo.UserId,
+						 Password: policeInfo.Password,
+						 Name: policeInfo.PoliceName,
+						 Type: policeInfo.PoliceType,
+						 City: policeInfo.PoliceCity,
+						 Dept: policeInfo.PoliceDept,
+						 Station: policeInfo.PoliceStation})
+	
+	if err != nil {
+		if mgo.IsDup(err) {
+			// return fmt.Errorf("AccDoc with this CaseNum already exists!")
+			return &pb.AccountReply{CreateSuccess: false}, err
+		}
+		// return fmt.Errorf("Failed insert AccDoc!")
+		return &pb.AccountReply{CreateSuccess: false}, err
+	}
+	// TODO: save "in" to database
+
+
+	return &pb.AccountReply{CreateSuccess: true}, nil
 }
 
+func ensureIndex(s *mgo.Session) {  
+	session := s.Copy()
+	defer session.Close()
+
+	c := session.DB("accident").C("accdocs")
+
+	index := mgo.Index{
+		Key:        []string{"casenum"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err := c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+}
+
+type PoliceDoc struct {
+	UserID      string   `json:"userid"`
+	Password    string   `json:"password"`
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`
+	City        string   `json:"city"`
+	Dept        string   `json:"dept"`
+	Station     string   `json:"station"`
+}
 
 func main() {
+
+	var dialErr error
+
+	dbSession, dialErr = mgo.Dial("localhost")
+	if dialErr != nil {
+		panic(dialErr)
+	}
+	defer dbSession.Close()
+
+	dbSession.SetMode(mgo.Monotonic, true)
+	ensureIndex(dbSession)
+
+
+
+	/////////////////////////////////////////////////////////////////////
 	lis, err := net.Listen("tcp", port)
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
