@@ -43,6 +43,7 @@ import (
 	"google.golang.org/grpc/reflection"
 
 	"gopkg.in/mgo.v2"
+	"gopkg.in/mgo.v2/bson"
 )
 
 const (
@@ -54,16 +55,69 @@ var dbSession *mgo.Session
 // server is used to implement ticket.TicketServer.
 type server struct{}
 
-func (s *server) Login(ctx context.Context, in *pb.LoginRequest) (*pb.LoginReply, error) {
-	return &pb.LoginReply{PoliceName: "Login " + in.UserId}, nil
+type PoliceDoc struct {
+	UserID      string   `json:"userid"`
+	Password    string   `json:"password"`
+	Name        string   `json:"name"`
+	Type        string   `json:"type"`
+	City        string   `json:"city"`
+	Dept        string   `json:"dept"`
+	Station     string   `json:"station"`
+}
+
+// type TicketDoc struct {
+// 	TicketID        int64     `json:"ticketid"`
+// 	UserID          string    `json:"userid"`
+// 	LicenseNum      string    `json:"licensenum"`
+// 	LicenseColor    string    `json:"licensecolor"`
+// 	CarType         string    `json:"cartype"`
+// 	CarColor        string    `json:"carcolor"`
+// 	Year            int32     `json:"year"`
+// 	Month           int32     `json:"month"`
+// 	Day             int32     `json:"day"`
+// 	Hour            int32     `json:"hour"`
+// 	Minute          int32     `json:"minute"`
+// 	Address         string    `json:"address"`
+// 	Longitude       float64   `json:"longitude"`
+// 	Latitude        float64   `json:"latitude"`
+// 	MapImage        []byte    `json:"mapimage"`
+// 	CarImage1       []byte    `json:"carimage1"`
+// 	CarImage2       []byte    `json:"carimage2"`
+// 	CarImage3       []byte    `json:"carimage3"`
+// }
+
+func (s *server) Login(ctx context.Context, loginInfo *pb.LoginRequest) (*pb.LoginReply, error) {
+	session := dbSession.Copy()
+    defer session.Close()
+    c := session.DB("police").C("policedocs")
+    var policeDoc PoliceDoc
+    err := c.Find(bson.M{"userid": loginInfo.UserId}).One(&policeDoc)
+    if err != nil {
+        log.Println("Failed find police: ", err)
+        return &pb.LoginReply{LoginSuccess: false}, err
+    }
+
+    if policeDoc.UserID == "" {
+    	log.Println("Police not found:!")
+        return &pb.LoginReply{LoginSuccess: false}, err
+    }
+
+    if policeDoc.Password != loginInfo.Password {
+    	log.Println("Wrong password! ")
+        return &pb.LoginReply{LoginSuccess: false}, err
+    }
+
+	return &pb.LoginReply{  LoginSuccess: true,
+							PoliceName: policeDoc.Name,
+							PoliceType: policeDoc.Type,
+							PoliceCity: policeDoc.City,
+							PoliceDept: policeDoc.Dept,
+							PoliceStation: policeDoc.Station}, nil
 }
 
 func (s *server) CreateAccount(ctx context.Context, policeInfo *pb.AccountRequest) (*pb.AccountReply, error) {
-
-	// TODO: save "in" to database
 	session := dbSession.Copy()
 	defer session.Close()
-
 	c := session.DB("police").C("policedocs")
 	err := c.Insert(&PoliceDoc{UserID: policeInfo.UserId,
 						 Password: policeInfo.Password,
@@ -72,18 +126,12 @@ func (s *server) CreateAccount(ctx context.Context, policeInfo *pb.AccountReques
 						 City: policeInfo.PoliceCity,
 						 Dept: policeInfo.PoliceDept,
 						 Station: policeInfo.PoliceStation})
-	
 	if err != nil {
 		if mgo.IsDup(err) {
-			// return fmt.Errorf("AccDoc with this CaseNum already exists!")
 			return &pb.AccountReply{CreateSuccess: false}, err
 		}
-		// return fmt.Errorf("Failed insert AccDoc!")
 		return &pb.AccountReply{CreateSuccess: false}, err
 	}
-	// TODO: save "in" to database
-
-
 	return &pb.AccountReply{CreateSuccess: true}, nil
 }
 
@@ -91,10 +139,10 @@ func ensureIndex(s *mgo.Session) {
 	session := s.Copy()
 	defer session.Close()
 
-	c := session.DB("accident").C("accdocs")
+	c := session.DB("police").C("policedocs")
 
 	index := mgo.Index{
-		Key:        []string{"casenum"},
+		Key:        []string{"userid"},
 		Unique:     true,
 		DropDups:   true,
 		Background: true,
@@ -106,15 +154,6 @@ func ensureIndex(s *mgo.Session) {
 	}
 }
 
-type PoliceDoc struct {
-	UserID      string   `json:"userid"`
-	Password    string   `json:"password"`
-	Name        string   `json:"name"`
-	Type        string   `json:"type"`
-	City        string   `json:"city"`
-	Dept        string   `json:"dept"`
-	Station     string   `json:"station"`
-}
 
 func main() {
 
