@@ -86,6 +86,12 @@ type PoliceDoc struct {
 	Station     string   `json:"station"`
 }
 
+type PoliceLocDoc struct {
+	UserID      string   `json:"userid"`
+	Longitude       float64   `json:"longitude"`
+	Latitude        float64   `json:"latitude"`
+}
+
 type TicketDoc struct {
 	TicketID        int64     `json:"ticketid"`
 	UserID          string    `json:"userid"`
@@ -145,34 +151,23 @@ func removeSlaveSubmit(name string) {
 }
 
 
-
-func (s *ticketServer) SlaveSubmit(stream pb.Ticket_SlaveSubmitServer) error {
-	in, err := stream.Recv()
-	if err == io.EOF {
-		return nil
-	}
+func (s *ticketServer) SlaveSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("policelocs").C("policelocdocs")
+	var p = PoliceLocDoc{UserID: slaveLoc.Sid,
+		Longitude: slaveLoc.Longitude,
+		Latitude: slaveLoc.Latitude}
+  	_, err := c.UpsertId(p.UserID, &p)
 	if err != nil {
-		return err
+		return &pb.MasterOrder{MasterOrder: "Insert/update loc failed!"}, err
 	}
-
-	fmt.Println("Sid = " + in.Sid)
-	fmt.Println("Lon = %d", in.SlaveLocation.Longitude)
-	fmt.Println("Lat = %d", in.SlaveLocation.Latitude)
-
-	sSubmitMailbox := make(chan pb.MasterOrder, 100)
-	if in.Sid == "" {
-		return fmt.Errorf("No SlaveSubmit ID!")
-	} else {
-		if !hasSlaveSubmit(in.Sid) {
-			addSlaveSubmit(in.Sid, sSubmitMailbox)		
-		}
-	}
-	masterOrder := <-sSubmitMailbox
-	if err := stream.Send(&masterOrder); err != nil {
-		return err
-	}
-	return nil
+	fmt.Println("Sid = " + slaveLoc.Sid)
+	fmt.Println("Longitude = %d", slaveLoc.Longitude)
+	fmt.Println("Latitude = %d", slaveLoc.Latitude)
+	return &pb.MasterOrder{MasterOrder: "Submit Loc Success!"}, nil
 }
+
 
 func (s *ticketServer) MasterReceive(stream pb.Ticket_MasterReceiveServer) error {
 	in, err := stream.Recv()
@@ -339,6 +334,19 @@ func ensureIndex(s *mgo.Session) {
 	}
 
 	c = session.DB("polices").C("policedocs")
+	index = mgo.Index{
+		Key:        []string{"userid"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+	c = session.DB("policelocs").C("policelocdocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,

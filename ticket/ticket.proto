@@ -14,7 +14,7 @@ service Ticket {
   rpc HareLogin (LoginRequest) returns (LoginReply) {}
   rpc RecordTicket (TicketRequest) returns (TicketReply) {}
 
-  rpc SlaveSubmit(stream SlaveLoc) returns (stream MasterOrder) {}
+  rpc SlaveSubmit(SlaveLoc) returns (MasterOrder) {}
   rpc MasterReceive(stream MasterOrder) returns (stream SlaveLoc) {}
 }
 
@@ -74,14 +74,10 @@ message TicketReply {
   bool record_success = 1;
 }
 
-message Location {
-  double longitude = 1;
-  double latitude = 2;
-}
-
 message SlaveLoc {
   string sid = 1;
-  Location slave_location = 2;
+  double longitude = 2;
+  double latitude = 3;
 }
 
 message MasterOrder {
