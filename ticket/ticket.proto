@@ -12,10 +12,13 @@ service Ticket {
 
   rpc HareCreateAccount (AccountRequest) returns (AccountReply) {}
   rpc HareLogin (LoginRequest) returns (LoginReply) {}
-  rpc RecordTicket (TicketRequest) returns (TicketReply) {}
+  rpc RecordTicket (TicketDetails) returns (RecordReply) {}
 
   rpc SlaveSubmit(SlaveLoc) returns (MasterOrder) {}
   rpc MasterReceive(stream MasterOrder) returns (stream SlaveLoc) {}
+
+  rpc PullLocation (PullLocRequest) returns (stream SlaveLoc) {}
+  rpc PullTicket (PullTicketRequest) returns (stream TicketDetails) {}
 }
 
 message AccountRequest {
@@ -48,7 +51,7 @@ message LoginReply {
   bytes police_portrait = 7;
 }
 
-message TicketRequest {
+message TicketDetails {
   int64 ticket_id = 1;
   string user_id = 2;
   string license_num = 3;
@@ -70,8 +73,16 @@ message TicketRequest {
   bytes ticket_image = 19;
 }
 
-message TicketReply {
+message RecordReply {
   bool record_success = 1;
+}
+
+message PullLocRequest {
+  string mid = 1;
+}
+
+message PullTicketRequest {
+  string mid = 1;
 }
 
 message SlaveLoc {

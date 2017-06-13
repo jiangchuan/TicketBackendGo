@@ -285,7 +285,7 @@ func (s *ticketServer) HareCreateAccount(ctx context.Context, policeInfo *pb.Acc
 	return &pb.AccountReply{CreateSuccess: true}, nil
 }
 
-func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketRequest) (*pb.TicketReply, error) {
+func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDetails) (*pb.RecordReply, error) {
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("tickets").C("ticketdocs")
@@ -309,11 +309,36 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketRe
 		TicketImage: ticketInfo.TicketImage})
 	if err != nil {
 		if mgo.IsDup(err) {
-			return &pb.TicketReply{RecordSuccess: false}, err
+			return &pb.RecordReply{RecordSuccess: false}, err
 		}
-		return &pb.TicketReply{RecordSuccess: false}, err
+		return &pb.RecordReply{RecordSuccess: false}, err
 	}
-	return &pb.TicketReply{RecordSuccess: true}, err
+	return &pb.RecordReply{RecordSuccess: true}, err
+}
+
+func (s *ticketServer) PullLocation(rect *pb.PullLocRequest, stream pb.Ticket_PullLocationServer) error {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("policelocs").C("policelocdocs")
+
+    var slaveLocs []PoliceLocDoc
+    err := c.Find(bson.M{}).All(&slaveLocs)
+    if err != nil {
+		log.Println("Failed find police locations: ", err)
+		return err
+    }
+	for _, slaveLoc := range slaveLocs {
+		if err := stream.Send(&pb.SlaveLoc{  Sid: slaveLoc.UserID,
+					Longitude: slaveLoc.Longitude,
+					Latitude: slaveLoc.Latitude}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *ticketServer) PullTicket(rect *pb.PullTicketRequest, stream pb.Ticket_PullTicketServer) error {
+	return nil
 }
 
 func ensureIndex(s *mgo.Session) {  
