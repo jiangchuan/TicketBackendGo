@@ -14,10 +14,12 @@ service Ticket {
   rpc HareLogin (LoginRequest) returns (LoginReply) {}
   rpc RecordTicket (TicketDetails) returns (RecordReply) {}
 
-  rpc SlaveSubmit(SlaveLoc) returns (MasterOrder) {}
+  rpc SlaveLocSubmit(SlaveLoc) returns (MasterOrder) {}
+  rpc SlaveAnchorSubmit(SlaveLoc) returns (MasterOrder) {}
   rpc MasterReceive(stream MasterOrder) returns (stream SlaveLoc) {}
 
   rpc PullLocation (PullLocRequest) returns (stream SlaveLoc) {}
+  rpc PullAnchors (PullAnchorRequest) returns (SlaveAnchors) {}
   rpc PullTicket (PullTicketRequest) returns (stream TicketDetails) {}
 }
 
@@ -81,6 +83,10 @@ message PullLocRequest {
   string mid = 1;
 }
 
+message PullAnchorRequest {
+  string sid = 1;
+}
+
 message PullTicketRequest {
   string mid = 1;
 }
@@ -94,4 +100,21 @@ message SlaveLoc {
 message MasterOrder {
   string mid = 1;
   string master_order = 2;
+}
+
+message SlaveAnchors {
+  string sid = 1;
+  int32 anchor_count = 2;
+  double anchor0_lng = 3;
+  double anchor0_lat = 4;
+  double anchor1_lng = 5;
+  double anchor1_lat = 6;
+  double anchor2_lng = 7;
+  double anchor2_lat = 8;
+  double anchor3_lng = 9;
+  double anchor3_lat = 10;
+  double anchor4_lng = 11;
+  double anchor4_lat = 12;
+  double anchor5_lng = 13;
+  double anchor5_lat = 14;
 }

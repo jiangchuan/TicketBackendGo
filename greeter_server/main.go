@@ -87,9 +87,26 @@ type PoliceDoc struct {
 }
 
 type PoliceLocDoc struct {
-	UserID      string   `json:"userid"`
-	Longitude       float64   `json:"longitude"`
-	Latitude        float64   `json:"latitude"`
+	UserID       string    `json:"userid"`
+	Longitude    float64   `json:"longitude"`
+	Latitude     float64   `json:"latitude"`
+}
+
+type PoliceAnchorDoc struct {
+	UserID         string    `json:"userid"`
+	AnchorCount    int32     `json:"anchorcount"`
+	Anchor0Lng     float64   `json:"anchor0lng"`
+	Anchor0Lat     float64   `json:"anchor0lat"`
+	Anchor1Lng     float64   `json:"anchor1lng"`
+	Anchor1Lat     float64   `json:"anchor1lat"`
+	Anchor2Lng     float64   `json:"anchor2lng"`
+	Anchor2Lat     float64   `json:"anchor2lat"`
+	Anchor3Lng     float64   `json:"anchor3lng"`
+	Anchor3Lat     float64   `json:"anchor3lat"`
+	Anchor4Lng     float64   `json:"anchor4lng"`
+	Anchor4Lat     float64   `json:"anchor4lat"`
+	Anchor5Lng     float64   `json:"anchor5lng"`
+	Anchor5Lat     float64   `json:"anchor5lat"`
 }
 
 type TicketDoc struct {
@@ -151,7 +168,7 @@ func removeSlaveSubmit(name string) {
 }
 
 
-func (s *ticketServer) SlaveSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
+func (s *ticketServer) SlaveLocSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("policelocs").C("policelocdocs")
@@ -166,6 +183,64 @@ func (s *ticketServer) SlaveSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (
 	fmt.Println("Longitude = %d", slaveLoc.Longitude)
 	fmt.Println("Latitude = %d", slaveLoc.Latitude)
 	return &pb.MasterOrder{MasterOrder: "Submit Loc Success!"}, nil
+}
+
+func Min(x, y int32) int32 {
+    if x < y {
+        return x
+    }
+    return y
+}
+
+func (s *ticketServer) SlaveAnchorSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("policelocs").C("policeanchordocs")
+
+	var policeAnchorDoc PoliceAnchorDoc
+	err := c.Find(bson.M{"userid": slaveLoc.Sid}).One(&policeAnchorDoc)
+	if err != nil || policeAnchorDoc.UserID == "" {
+		var p = PoliceAnchorDoc{UserID: slaveLoc.Sid,
+			AnchorCount: 1,
+			Anchor0Lng: 0.0,
+			Anchor0Lat: 0.0,
+			Anchor1Lng: 0.0,
+			Anchor1Lat: 0.0,
+			Anchor2Lng: 0.0,
+			Anchor2Lat: 0.0,
+			Anchor3Lng: 0.0,
+			Anchor3Lat: 0.0,
+			Anchor4Lng: 0.0,
+			Anchor4Lat: 0.0,
+			Anchor5Lng: slaveLoc.Longitude,
+			Anchor5Lat: slaveLoc.Latitude}
+	  	_, err = c.UpsertId(p.UserID, &p)
+		if err != nil {
+			return &pb.MasterOrder{MasterOrder: "First insert/update anchor failed!"}, err
+		}
+		return &pb.MasterOrder{MasterOrder: "First Submit Anchor Success!"}, nil
+	}
+
+	var p = PoliceAnchorDoc{UserID: slaveLoc.Sid,
+		AnchorCount: Min(policeAnchorDoc.AnchorCount + 1, 6),
+		Anchor0Lng: policeAnchorDoc.Anchor1Lng,
+		Anchor0Lat: policeAnchorDoc.Anchor1Lat,
+		Anchor1Lng: policeAnchorDoc.Anchor2Lng,
+		Anchor1Lat: policeAnchorDoc.Anchor2Lat,
+		Anchor2Lng: policeAnchorDoc.Anchor3Lng,
+		Anchor2Lat: policeAnchorDoc.Anchor3Lat,
+		Anchor3Lng: policeAnchorDoc.Anchor4Lng,
+		Anchor3Lat: policeAnchorDoc.Anchor4Lat,
+		Anchor4Lng: policeAnchorDoc.Anchor5Lng,
+		Anchor4Lat: policeAnchorDoc.Anchor5Lat,
+		Anchor5Lng: slaveLoc.Longitude,
+		Anchor5Lat: slaveLoc.Latitude}
+
+  	_, err = c.UpsertId(p.UserID, &p)
+	if err != nil {
+		return &pb.MasterOrder{MasterOrder: "Second - Sixth insert/update anchor failed!"}, err
+	}
+	return &pb.MasterOrder{MasterOrder: "Second - Sixth Submit Anchor Success!"}, nil
 }
 
 
@@ -337,6 +412,69 @@ func (s *ticketServer) PullLocation(rect *pb.PullLocRequest, stream pb.Ticket_Pu
 	return nil
 }
 
+func (s *ticketServer) PullAnchors(ctx context.Context, pullAnchorRequest *pb.PullAnchorRequest) (*pb.SlaveAnchors, error) {
+	fmt.Println("Entered PullAnchors")
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("policelocs").C("policeanchordocs")
+	var slaveAnchorsDoc PoliceAnchorDoc
+	err := c.Find(bson.M{"userid": pullAnchorRequest.Sid}).One(&slaveAnchorsDoc)
+	if err != nil {
+		log.Println("Failed find police anchors: ", err)
+		return &pb.SlaveAnchors{AnchorCount: -1}, err
+	}
+	if slaveAnchorsDoc.UserID == "" {
+		log.Println("Police not found:!")
+		return &pb.SlaveAnchors{AnchorCount: -1}, err
+	}
+	return &pb.SlaveAnchors{  Sid: slaveAnchorsDoc.UserID,
+					AnchorCount: slaveAnchorsDoc.AnchorCount,
+					Anchor0Lng: slaveAnchorsDoc.Anchor0Lng,
+					Anchor0Lat: slaveAnchorsDoc.Anchor0Lat,
+					Anchor1Lng: slaveAnchorsDoc.Anchor1Lng,
+					Anchor1Lat: slaveAnchorsDoc.Anchor1Lat,
+					Anchor2Lng: slaveAnchorsDoc.Anchor2Lng,
+					Anchor2Lat: slaveAnchorsDoc.Anchor2Lat,
+					Anchor3Lng: slaveAnchorsDoc.Anchor3Lng,
+					Anchor3Lat: slaveAnchorsDoc.Anchor3Lat,
+					Anchor4Lng: slaveAnchorsDoc.Anchor4Lng,
+					Anchor4Lat: slaveAnchorsDoc.Anchor4Lat,
+					Anchor5Lng: slaveAnchorsDoc.Anchor5Lng,
+					Anchor5Lat: slaveAnchorsDoc.Anchor5Lat}, nil
+}
+
+// func (s *ticketServer) PullAnchors(rect *pb.PullLocRequest, stream pb.Ticket_PullAnchorsServer) error {
+// 	session := dbSession.Copy()
+// 	defer session.Close()
+// 	c := session.DB("policelocs").C("policeanchordocs")
+
+//     var slaveAnchorsDoc []PoliceAnchorDoc
+//     err := c.Find(bson.M{}).All(&slaveAnchorsDoc)
+//     if err != nil {
+// 		log.Println("Failed find police anchors: ", err)
+// 		return err
+//     }
+// 	for _, slaveAnchor := range slaveAnchorsDoc {
+// 		if err := stream.Send(&pb.SlaveAnchors{  Sid: slaveAnchor.UserID,
+// 					AnchorCount: slaveAnchor.AnchorCount,
+// 					Anchor0Lng: slaveAnchor.Anchor0Lng,
+// 					Anchor0Lat: slaveAnchor.Anchor0Lat,
+// 					Anchor1Lng: slaveAnchor.Anchor1Lng,
+// 					Anchor1Lat: slaveAnchor.Anchor1Lat,
+// 					Anchor2Lng: slaveAnchor.Anchor2Lng,
+// 					Anchor2Lat: slaveAnchor.Anchor2Lat,
+// 					Anchor3Lng: slaveAnchor.Anchor3Lng,
+// 					Anchor3Lat: slaveAnchor.Anchor3Lat,
+// 					Anchor4Lng: slaveAnchor.Anchor4Lng,
+// 					Anchor4Lat: slaveAnchor.Anchor4Lat,
+// 					Anchor5Lng: slaveAnchor.Anchor5Lng,
+// 					Anchor5Lat: slaveAnchor.Anchor5Lat}); err != nil {
+// 			return err
+// 		}
+// 	}
+// 	return nil
+// }
+
 func (s *ticketServer) PullTicket(rect *pb.PullTicketRequest, stream pb.Ticket_PullTicketServer) error {
 	return nil
 }
@@ -372,6 +510,19 @@ func ensureIndex(s *mgo.Session) {
 	}
 
 	c = session.DB("policelocs").C("policelocdocs")
+	index = mgo.Index{
+		Key:        []string{"userid"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+	c = session.DB("policelocs").C("policeanchordocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,
