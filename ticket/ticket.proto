@@ -13,6 +13,7 @@ service Ticket {
   rpc HareCreateAccount (AccountRequest) returns (AccountReply) {}
   rpc HareLogin (LoginRequest) returns (LoginReply) {}
   rpc RecordTicket (TicketDetails) returns (RecordReply) {}
+  rpc SubmitTicketStats (TicketStats) returns (StatsReply) {}
 
   rpc SlaveLocSubmit(SlaveLoc) returns (MasterOrder) {}
   rpc SlaveAnchorSubmit(SlaveLoc) returns (MasterOrder) {}
@@ -77,6 +78,16 @@ message TicketDetails {
 
 message RecordReply {
   bool record_success = 1;
+}
+
+message TicketStats {
+  string sid = 1;
+  int32 saved_ticket_count = 2;
+  int32 uploaded_ticket_count = 3;
+}
+
+message StatsReply {
+  bool stats_success = 1;
 }
 
 message PullLocRequest {

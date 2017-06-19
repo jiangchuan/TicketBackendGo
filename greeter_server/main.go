@@ -86,6 +86,12 @@ type PoliceDoc struct {
 	Station     string   `json:"station"`
 }
 
+type TicketStatsDoc struct {
+	UserID                 string   `json:"userid"`
+	SavedTicketCount       int32     `json:"savedticketcount"`
+	UploadedTicketCount    int32     `json:"uploadedticketcount"`
+}
+
 type PoliceLocDoc struct {
 	UserID       string    `json:"userid"`
 	Longitude    float64   `json:"longitude"`
@@ -391,6 +397,20 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 	return &pb.RecordReply{RecordSuccess: true}, err
 }
 
+func (s *ticketServer) SubmitTicketStats(ctx context.Context, ticketStats *pb.TicketStats) (*pb.StatsReply, error) {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("polices").C("ticketstatsdocs")
+	var p = TicketStatsDoc{UserID: ticketStats.Sid,
+		SavedTicketCount: ticketStats.SavedTicketCount,
+		UploadedTicketCount: ticketStats.UploadedTicketCount}
+  	_, err := c.UpsertId(p.UserID, &p)
+	if err != nil {
+		return &pb.StatsReply{StatsSuccess: false}, err
+	}
+	return &pb.StatsReply{StatsSuccess: true}, nil
+}
+
 func (s *ticketServer) PullLocation(rect *pb.PullLocRequest, stream pb.Ticket_PullLocationServer) error {
 	session := dbSession.Copy()
 	defer session.Close()
@@ -497,6 +517,19 @@ func ensureIndex(s *mgo.Session) {
 	}
 
 	c = session.DB("polices").C("policedocs")
+	index = mgo.Index{
+		Key:        []string{"userid"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+	c = session.DB("polices").C("ticketstatsdocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,
