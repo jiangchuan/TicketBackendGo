@@ -21,7 +21,12 @@ service Ticket {
 
   rpc PullLocation (PullLocRequest) returns (stream SlaveLoc) {}
   rpc PullAnchors (PullAnchorRequest) returns (SlaveAnchors) {}
+  rpc PullTicketStats (PullTicketStatsRequest) returns (TicketStats) {}
   rpc PullTicket (PullTicketRequest) returns (stream TicketDetails) {}
+
+  rpc SetTicketRange (TicketRange) returns (TicketRangeReply) {}
+  rpc PullTicketRange (TicketRangeSid) returns (TicketRange) {}
+
 }
 
 message AccountRequest {
@@ -98,6 +103,10 @@ message PullAnchorRequest {
   string sid = 1;
 }
 
+message PullTicketStatsRequest {
+  string sid = 1;
+}
+
 message PullTicketRequest {
   string mid = 1;
 }
@@ -129,3 +138,17 @@ message SlaveAnchors {
   double anchor5_lng = 13;
   double anchor5_lat = 14;
 }
+
+message TicketRange {
+  int64 ticket_id_start = 1;
+  int64 ticket_id_end = 2;
+}
+
+message TicketRangeReply {
+  bool range_success = 1;
+}
+
+message TicketRangeSid {
+  string sid = 1;
+}
+

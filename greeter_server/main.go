@@ -136,6 +136,12 @@ type TicketDoc struct {
 	TicketImage     []byte    `json:"ticketimage"`
 }
 
+type TicketRangeDoc struct {
+	UserID           string    `json:"userid"`
+	TicketIDStart    int64     `json:"ticketidstart"`
+	TicketIDEnd      int64     `json:"ticketidend"`
+}
+
 var masterReceiveMap = make(map[string]chan pb.SlaveLoc, 100)
 var slaveSubmitMap = make(map[string]chan pb.MasterOrder, 100)
 
@@ -397,6 +403,64 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 	return &pb.RecordReply{RecordSuccess: true}, err
 }
 
+func (s *ticketServer) SetTicketRange(ctx context.Context, ticketRange *pb.TicketRange) (*pb.TicketRangeReply, error) {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("tickets").C("ticketrangedocs")
+	var p = TicketRangeDoc{UserID: "Admin",
+		TicketIDStart: ticketRange.TicketIdStart,
+		TicketIDEnd: ticketRange.TicketIdEnd}
+  	_, err := c.UpsertId(p.UserID, &p)
+	if err != nil {
+		return &pb.TicketRangeReply{RangeSuccess: false}, err
+	}
+	return &pb.TicketRangeReply{RangeSuccess: true}, err
+}
+
+func (s *ticketServer) PullTicketRange(ctx context.Context, ticketRangeSid *pb.TicketRangeSid) (*pb.TicketRange, error) {
+	const DELTA_RANGE int64 = 200
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("tickets").C("ticketrangedocs")
+
+	var ticketRangeDoc TicketRangeDoc
+	err := c.Find(bson.M{"userid": "Admin"}).One(&ticketRangeDoc)
+	if err != nil {
+		log.Println("Failed to find Admin: ", err)
+		return &pb.TicketRange{TicketIdStart: -1, TicketIdEnd: -1}, err
+	}
+	if ticketRangeDoc.UserID == "" {
+		log.Println("Admin not found!")
+		return &pb.TicketRange{TicketIdStart: -1, TicketIdEnd: -1}, err
+	}
+
+	var theStart = ticketRangeDoc.TicketIDStart
+	var newStart = ticketRangeDoc.TicketIDStart + DELTA_RANGE
+	var theEnd = ticketRangeDoc.TicketIDEnd
+	if newStart > theEnd {
+		log.Println("Out of range!")
+		return &pb.TicketRange{TicketIdStart: -1, TicketIdEnd: -1}, err		
+	}
+
+	var pAdmin = TicketRangeDoc{UserID: "Admin",
+		TicketIDStart: newStart,
+		TicketIDEnd: theEnd}
+  	_, err = c.UpsertId(pAdmin.UserID, &pAdmin)
+	if err != nil {
+		log.Println("Fail to update overall range!")
+		return &pb.TicketRange{TicketIdStart: -1, TicketIdEnd: -1}, err		
+	}
+
+	var pSid = TicketRangeDoc{UserID: ticketRangeSid.Sid,
+		TicketIDStart: theStart,
+		TicketIDEnd: (newStart - 1)}
+  	_, err = c.UpsertId(pSid.UserID, &pSid)
+	if err != nil {
+		log.Println("Fail to update sid range!")
+	}
+	return &pb.TicketRange{TicketIdStart: pSid.TicketIDStart, TicketIdEnd: pSid.TicketIDEnd}, err
+}
+
 func (s *ticketServer) SubmitTicketStats(ctx context.Context, ticketStats *pb.TicketStats) (*pb.StatsReply, error) {
 	session := dbSession.Copy()
 	defer session.Close()
@@ -433,7 +497,6 @@ func (s *ticketServer) PullLocation(rect *pb.PullLocRequest, stream pb.Ticket_Pu
 }
 
 func (s *ticketServer) PullAnchors(ctx context.Context, pullAnchorRequest *pb.PullAnchorRequest) (*pb.SlaveAnchors, error) {
-	fmt.Println("Entered PullAnchors")
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("policelocs").C("policeanchordocs")
@@ -463,37 +526,24 @@ func (s *ticketServer) PullAnchors(ctx context.Context, pullAnchorRequest *pb.Pu
 					Anchor5Lat: slaveAnchorsDoc.Anchor5Lat}, nil
 }
 
-// func (s *ticketServer) PullAnchors(rect *pb.PullLocRequest, stream pb.Ticket_PullAnchorsServer) error {
-// 	session := dbSession.Copy()
-// 	defer session.Close()
-// 	c := session.DB("policelocs").C("policeanchordocs")
-
-//     var slaveAnchorsDoc []PoliceAnchorDoc
-//     err := c.Find(bson.M{}).All(&slaveAnchorsDoc)
-//     if err != nil {
-// 		log.Println("Failed find police anchors: ", err)
-// 		return err
-//     }
-// 	for _, slaveAnchor := range slaveAnchorsDoc {
-// 		if err := stream.Send(&pb.SlaveAnchors{  Sid: slaveAnchor.UserID,
-// 					AnchorCount: slaveAnchor.AnchorCount,
-// 					Anchor0Lng: slaveAnchor.Anchor0Lng,
-// 					Anchor0Lat: slaveAnchor.Anchor0Lat,
-// 					Anchor1Lng: slaveAnchor.Anchor1Lng,
-// 					Anchor1Lat: slaveAnchor.Anchor1Lat,
-// 					Anchor2Lng: slaveAnchor.Anchor2Lng,
-// 					Anchor2Lat: slaveAnchor.Anchor2Lat,
-// 					Anchor3Lng: slaveAnchor.Anchor3Lng,
-// 					Anchor3Lat: slaveAnchor.Anchor3Lat,
-// 					Anchor4Lng: slaveAnchor.Anchor4Lng,
-// 					Anchor4Lat: slaveAnchor.Anchor4Lat,
-// 					Anchor5Lng: slaveAnchor.Anchor5Lng,
-// 					Anchor5Lat: slaveAnchor.Anchor5Lat}); err != nil {
-// 			return err
-// 		}
-// 	}
-// 	return nil
-// }
+func (s *ticketServer) PullTicketStats(ctx context.Context, pullTicketStatsRequest *pb.PullTicketStatsRequest) (*pb.TicketStats, error) {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("polices").C("ticketstatsdocs")
+	var ticketStatsDoc TicketStatsDoc
+	err := c.Find(bson.M{"userid": pullTicketStatsRequest.Sid}).One(&ticketStatsDoc)
+	if err != nil {
+		log.Println("Failed find ticket stats: ", err)
+		return &pb.TicketStats{SavedTicketCount: -1}, err
+	}
+	if ticketStatsDoc.UserID == "" {
+		log.Println("Police not found:!")
+		return &pb.TicketStats{SavedTicketCount: -1}, err
+	}
+	return &pb.TicketStats{  Sid: ticketStatsDoc.UserID,
+					SavedTicketCount: ticketStatsDoc.SavedTicketCount,
+					UploadedTicketCount: ticketStatsDoc.UploadedTicketCount}, nil
+}
 
 func (s *ticketServer) PullTicket(rect *pb.PullTicketRequest, stream pb.Ticket_PullTicketServer) error {
 	return nil
@@ -571,6 +621,19 @@ func ensureIndex(s *mgo.Session) {
 	c = session.DB("tickets").C("ticketdocs")
 	index = mgo.Index{
 		Key:        []string{"ticketid"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+	c = session.DB("tickets").C("ticketrangedocs")
+	index = mgo.Index{
+		Key:        []string{"userid"},
 		Unique:     true,
 		DropDups:   true,
 		Background: true,
