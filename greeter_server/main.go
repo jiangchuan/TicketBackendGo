@@ -37,6 +37,7 @@ import (
  "flag"
  "fmt"
  "log"
+ "os"
  "io"
  "net"
  "sync"
@@ -341,7 +342,7 @@ func (s *ticketServer) HareLogin(ctx context.Context, loginInfo *pb.LoginRequest
 		return &pb.LoginReply{LoginSuccess: false}, err
 	}
 	if policeDoc.Password != loginInfo.Password {
-		log.Println("Wrong password! ")
+		log.Println("Wrong password!")
 		return &pb.LoginReply{LoginSuccess: false}, err
 	}
 	return &pb.LoginReply{  LoginSuccess: true,
@@ -373,6 +374,21 @@ func (s *ticketServer) HareCreateAccount(ctx context.Context, policeInfo *pb.Acc
 }
 
 func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDetails) (*pb.RecordReply, error) {
+	dayName := fmt.Sprintf("%d-%d-%d", ticketInfo.Year, ticketInfo.Month, ticketInfo.Day)
+	timeNumName := fmt.Sprintf("%d-%d_%d", ticketInfo.Hour, ticketInfo.Minute, ticketInfo.TicketId)
+	directoryPath := fmt.Sprintf("./tickets/%s/%s_%s", dayName, dayName, timeNumName)
+	ticketPath := fmt.Sprintf("%s/ticket_%d.txt", directoryPath, ticketInfo.TicketId)
+	fmt.Println(ticketPath)
+
+	ticketContent := fmt.Sprintf("罚单编号: %d\n车辆牌号: %s\n车身颜色: %s\n车辆类型: %s\n号牌颜色: %s\n停车时间: %d年%d月%d日%d时%d分\n停车地点: %s", 
+			ticketInfo.TicketId, ticketInfo.LicenseNum, ticketInfo.VehicleColor, ticketInfo.VehicleType, ticketInfo.LicenseColor,
+			ticketInfo.Year, ticketInfo.Month, ticketInfo.Day, ticketInfo.Hour, ticketInfo.Minute, ticketInfo.Address)
+	fmt.Println(ticketContent)
+
+	createDirectory(directoryPath)
+	createFile(ticketPath)
+	writeFile(ticketPath, ticketContent)
+
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("tickets").C("ticketdocs")
@@ -549,6 +565,84 @@ func (s *ticketServer) PullTicket(rect *pb.PullTicketRequest, stream pb.Ticket_P
 	return nil
 }
 
+////////// Read and Write Files //////////
+func createDirectory(directoryPath string) {
+	//choose your permissions well
+	err := os.MkdirAll(directoryPath, 0777)
+ 
+	//check if you need to panic, fallback or report
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+}
+
+func createFile(path string) {
+	// detect if file exists
+	var _, err = os.Stat(path)
+
+	// create file if not exists
+	if os.IsNotExist(err) {
+		var file, err = os.Create(path)
+		checkError(err) //okay to call os.exit() 
+		defer file.Close()
+	}
+}
+
+func writeFile(path string, content string) {
+	// open file using READ & WRITE permission
+	var file, err = os.OpenFile(path, os.O_RDWR, 0644)
+	checkError(err)
+	defer file.Close()
+
+	// write some text to file
+	_, err = file.WriteString(content)
+	if err != nil {
+		fmt.Println(err.Error())
+		return //must return here for defer statements to be called
+	}
+
+	// save changes
+	err = file.Sync()
+	if err != nil {
+		fmt.Println(err.Error())
+		return //same as above
+	}
+}
+
+func readFile(path string) {
+	// re-open file
+	var file, err = os.OpenFile(path, os.O_RDWR, 0644)
+	checkError(err)
+	defer file.Close()
+
+	// read file
+	var text = make([]byte, 1024)
+	n, err := file.Read(text)
+	if n > 0 {
+		fmt.Println(string(text))
+	}
+	//if there is an error while reading
+	//just print however much was read if any
+	//at return file will be closed
+}
+
+func deleteFile(path string) {
+	// delete file
+	var err = os.Remove(path)
+	checkError(err)
+}
+
+func checkError(err error) {
+	if err != nil {
+		fmt.Println(err.Error())
+		os.Exit(0)
+	}
+}
+
+
+
+
+////////// Main //////////
 func ensureIndex(s *mgo.Session) {  
 	session := s.Copy()
 	defer session.Close()
@@ -655,7 +749,6 @@ func newServer() *ticketServer {
 }
 
 func main() {
-
 	var dialErr error
 
 	dbSession, dialErr = mgo.Dial("localhost")
