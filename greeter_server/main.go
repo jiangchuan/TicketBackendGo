@@ -40,6 +40,7 @@ import (
  "os"
  "io"
  "net"
+ "net/http"
  "sync"
 
  "golang.org/x/net/context"
@@ -377,17 +378,29 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 	dayName := fmt.Sprintf("%d-%d-%d", ticketInfo.Year, ticketInfo.Month, ticketInfo.Day)
 	timeNumName := fmt.Sprintf("%d-%d_%d", ticketInfo.Hour, ticketInfo.Minute, ticketInfo.TicketId)
 	directoryPath := fmt.Sprintf("./tickets/%s/%s_%s", dayName, dayName, timeNumName)
-	ticketPath := fmt.Sprintf("%s/ticket_%d.txt", directoryPath, ticketInfo.TicketId)
-	fmt.Println(ticketPath)
+	createDirectory(directoryPath)
 
+	// Write ticket.txt
+	ticketPath := fmt.Sprintf("%s/ticket_%d.txt", directoryPath, ticketInfo.TicketId)
 	ticketContent := fmt.Sprintf("罚单编号: %d\n车辆牌号: %s\n车身颜色: %s\n车辆类型: %s\n号牌颜色: %s\n停车时间: %d年%d月%d日%d时%d分\n停车地点: %s", 
 			ticketInfo.TicketId, ticketInfo.LicenseNum, ticketInfo.VehicleColor, ticketInfo.VehicleType, ticketInfo.LicenseColor,
 			ticketInfo.Year, ticketInfo.Month, ticketInfo.Day, ticketInfo.Hour, ticketInfo.Minute, ticketInfo.Address)
-	fmt.Println(ticketContent)
-
-	createDirectory(directoryPath)
 	createFile(ticketPath)
 	writeFile(ticketPath, ticketContent)
+
+
+	// Write img.jpg
+	imgPath := fmt.Sprintf("%s/image1_%d.jpg", directoryPath, ticketInfo.TicketId)
+	createFile(imgPath)
+	writeImage(imgPath, ticketInfo.FarImage)
+
+	imgPath = fmt.Sprintf("%s/image2_%d.jpg", directoryPath, ticketInfo.TicketId)
+	createFile(imgPath)
+	writeImage(imgPath, ticketInfo.CloseImage)
+
+	imgPath = fmt.Sprintf("%s/image3_%d.jpg", directoryPath, ticketInfo.TicketId)
+	createFile(imgPath)
+	writeImage(imgPath, ticketInfo.TicketImage)
 
 	session := dbSession.Copy()
 	defer session.Close()
@@ -609,6 +622,27 @@ func writeFile(path string, content string) {
 	}
 }
 
+func writeImage(path string, content []byte) {
+	// open file using READ & WRITE permission
+	var file, err = os.OpenFile(path, os.O_RDWR, 0644)
+	checkError(err)
+	defer file.Close()
+
+	// write some text to file
+	_, err = file.Write(content)
+	if err != nil {
+		fmt.Println(err.Error())
+		return //must return here for defer statements to be called
+	}
+
+	// save changes
+	err = file.Sync()
+	if err != nil {
+		fmt.Println(err.Error())
+		return //same as above
+	}
+}
+
 func readFile(path string) {
 	// re-open file
 	var file, err = os.OpenFile(path, os.O_RDWR, 0644)
@@ -749,6 +783,14 @@ func newServer() *ticketServer {
 }
 
 func main() {
+
+
+	go func() {
+		http.Handle("/", http.FileServer(http.Dir("./")))
+		http.ListenAndServe(":8080", nil)
+	}()
+
+
 	var dialErr error
 
 	dbSession, dialErr = mgo.Dial("localhost")
