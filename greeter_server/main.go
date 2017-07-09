@@ -1,36 +1,3 @@
-/*
- *
- * Copyright 2015, Google Inc.
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
- *
- *     * Redistributions of source code must retain the above copyright
- * notice, this list of conditions and the following disclaimer.
- *     * Redistributions in binary form must reproduce the above
- * copyright notice, this list of conditions and the following disclaimer
- * in the documentation and/or other materials provided with the
- * distribution.
- *     * Neither the name of Google Inc. nor the names of its
- * contributors may be used to endorse or promote products derived from
- * this software without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
- * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- *
- */
-
 package main
 
 import (
@@ -42,6 +9,10 @@ import (
  "net"
  "net/http"
  "sync"
+ "archive/zip"
+ "path/filepath"
+ "strings"
+ "time"
 
  "golang.org/x/net/context"
  "google.golang.org/grpc"
@@ -56,9 +27,14 @@ import (
  "gopkg.in/mgo.v2/bson"
 )
 
-// const (
-// 	port = ":50051"
-// )
+const (
+	// port = ":50051"
+	INTERVAL_PERIOD time.Duration = 24 * time.Hour
+	HOUR_TO_TICK int = 23
+	MINUTE_TO_TICK int = 59
+	SECOND_TO_TICK int = 30
+)
+
 
 var (
 	tls        = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
@@ -674,6 +650,112 @@ func checkError(err error) {
 }
 
 
+func zipit(source, target string) error {
+	zipfile, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer zipfile.Close()
+
+	archive := zip.NewWriter(zipfile)
+	defer archive.Close()
+
+	info, err := os.Stat(source)
+	if err != nil {
+		return nil
+	}
+
+	var baseDir string
+	if info.IsDir() {
+		baseDir = filepath.Base(source)
+	}
+
+	filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		header, err := zip.FileInfoHeader(info)
+		if err != nil {
+			return err
+		}
+		if baseDir != "" {
+			header.Name = filepath.Join(baseDir, strings.TrimPrefix(path, source))
+		}
+		if info.IsDir() {
+			header.Name += "/"
+		} else {
+			header.Method = zip.Deflate
+		}
+		writer, err := archive.CreateHeader(header)
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+		_, err = io.Copy(writer, file)
+		return err
+	})
+	return err
+}
+
+func unzip(archive, target string) error {
+    reader, err := zip.OpenReader(archive)
+    if err != nil {
+        return err
+    }
+
+    if err := os.MkdirAll(target, 0755); err != nil {
+        return err
+    }
+
+    for _, file := range reader.File {
+        path := filepath.Join(target, file.Name)
+        if file.FileInfo().IsDir() {
+            os.MkdirAll(path, file.Mode())
+            continue
+        }
+
+        fileReader, err := file.Open()
+        if err != nil {
+            if fileReader != nil {
+                fileReader.Close()
+            }
+            return err
+        }
+
+        targetFile, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+        if err != nil {
+            fileReader.Close()
+            if targetFile != nil {
+                targetFile.Close()
+            }
+            return err
+        }
+
+        if _, err := io.Copy(targetFile, fileReader); err != nil {
+            fileReader.Close()
+            targetFile.Close()
+            return err
+        }
+
+        fileReader.Close()
+        targetFile.Close()
+    }
+
+    return nil
+}
+
+func zipDayTickets(dayName string) {
+	os.Chdir(fmt.Sprintf("./tickets/%s", dayName))
+	zipit(".", fmt.Sprintf("../%s.zip", dayName))
+	os.Chdir("../..")
+}
 
 
 ////////// Main //////////
@@ -782,8 +864,29 @@ func newServer() *ticketServer {
 	return s
 }
 
+func updateTicker() *time.Ticker {
+	nextTick := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), HOUR_TO_TICK, MINUTE_TO_TICK, SECOND_TO_TICK, 0, time.Local)
+	if !nextTick.After(time.Now()) {
+		nextTick = nextTick.Add(INTERVAL_PERIOD)
+	}
+	fmt.Println(nextTick, "- next zip")
+	diff := nextTick.Sub(time.Now())
+	return time.NewTicker(diff)
+}
+
 func main() {
 
+	// zipDayTickets("2017-8-6")
+	go func() {
+		ticker := updateTicker()
+	    for {
+			<-ticker.C
+			folderName := fmt.Sprintf("%d-%d-%d", time.Now().Year(), int(time.Now().Month()), time.Now().Day())
+			zipDayTickets(folderName)
+			fmt.Println(time.Now(), fmt.Sprintf("- just zipped %s", folderName))
+			ticker = updateTicker()
+	    }
+    }()
 
 	go func() {
 		http.Handle("/", http.FileServer(http.Dir("./")))
