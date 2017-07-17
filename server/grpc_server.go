@@ -735,8 +735,6 @@ func ensureIndex(s *mgo.Session) {
 	if err != nil {
 		panic(err)
 	}
-
-
 }
 
 ////////// Main //////////
