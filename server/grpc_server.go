@@ -295,6 +295,38 @@ func (s *ticketServer) RhinoCreateAccount(ctx context.Context, policeInfo *pb.Ac
 	return &pb.AccountReply{CreateSuccess: true}, nil
 }
 
+func (s *ticketServer) RhinoChangePassword(ctx context.Context, loginInfo *pb.PasswordRequest) (*pb.LoginReply, error) {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("polices").C("officerdocs")
+	var policeDoc PoliceDoc
+	err := c.Find(bson.M{"userid": loginInfo.UserId}).One(&policeDoc)
+	if err != nil {
+		log.Println("Failed to find police: ", err)
+		return &pb.LoginReply{LoginSuccess: false}, err
+	}
+	if policeDoc.UserID == "" {
+		log.Println("Police not found:!")
+		return &pb.LoginReply{LoginSuccess: false}, err
+	}
+	if policeDoc.Password != loginInfo.Password {
+		log.Println("Wrong password!")
+		return &pb.LoginReply{LoginSuccess: false}, err
+	}
+	// Update password
+	err = c.Update(bson.M{"userid": loginInfo.UserId}, bson.M{"$set": bson.M{"password": loginInfo.NewPassword}})
+	if err != nil {
+		log.Println("Failed to change password: ", err)
+		return &pb.LoginReply{LoginSuccess: false}, err
+	}
+	return &pb.LoginReply{  LoginSuccess: true,
+		PoliceName: policeDoc.Name,
+		PoliceType: policeDoc.Type,
+		PoliceCity: policeDoc.City,
+		PoliceDept: policeDoc.Dept,
+		PoliceStation: policeDoc.Station}, nil
+}
+
 func (s *ticketServer) HareLogin(ctx context.Context, loginInfo *pb.LoginRequest) (*pb.LoginReply, error) {
 	session := dbSession.Copy()
 	defer session.Close()
@@ -302,7 +334,7 @@ func (s *ticketServer) HareLogin(ctx context.Context, loginInfo *pb.LoginRequest
 	var policeDoc PoliceDoc
 	err := c.Find(bson.M{"userid": loginInfo.UserId}).One(&policeDoc)
 	if err != nil {
-		log.Println("Failed find police: ", err)
+		log.Println("Failed to find police: ", err)
 		return &pb.LoginReply{LoginSuccess: false}, err
 	}
 	if policeDoc.UserID == "" {
@@ -340,6 +372,39 @@ func (s *ticketServer) HareCreateAccount(ctx context.Context, policeInfo *pb.Acc
 	}
 	return &pb.AccountReply{CreateSuccess: true}, nil
 }
+
+func (s *ticketServer) HareChangePassword(ctx context.Context, loginInfo *pb.PasswordRequest) (*pb.LoginReply, error) {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("polices").C("policedocs")
+	var policeDoc PoliceDoc
+	err := c.Find(bson.M{"userid": loginInfo.UserId}).One(&policeDoc)
+	if err != nil {
+		log.Println("Failed to find police: ", err)
+		return &pb.LoginReply{LoginSuccess: false}, err
+	}
+	if policeDoc.UserID == "" {
+		log.Println("Police not found:!")
+		return &pb.LoginReply{LoginSuccess: false}, err
+	}
+	if policeDoc.Password != loginInfo.Password {
+		log.Println("Wrong password!")
+		return &pb.LoginReply{LoginSuccess: false}, err
+	}
+	// Update password
+	err = c.Update(bson.M{"userid": loginInfo.UserId}, bson.M{"$set": bson.M{"password": loginInfo.NewPassword}})
+	if err != nil {
+		log.Println("Failed to change password: ", err)
+		return &pb.LoginReply{LoginSuccess: false}, err
+	}
+	return &pb.LoginReply{  LoginSuccess: true,
+		PoliceName: policeDoc.Name,
+		PoliceType: policeDoc.Type,
+		PoliceCity: policeDoc.City,
+		PoliceDept: policeDoc.Dept,
+		PoliceStation: policeDoc.Station}, nil
+}
+
 
 func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDetails) (*pb.RecordReply, error) {
 	dayName := fmt.Sprintf("%d-%d-%d", ticketInfo.Year, ticketInfo.Month, ticketInfo.Day)
