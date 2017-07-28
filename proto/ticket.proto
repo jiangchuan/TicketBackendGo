@@ -39,8 +39,9 @@ message AccountRequest {
   string police_type = 4;
   string police_city = 5;
   string police_dept = 6;
-  string police_station = 7;
-  bytes police_portrait = 8;
+  string police_squad = 7;
+  string police_section = 8;
+  bytes police_portrait = 9;
 }
 
 message AccountReply {
@@ -58,8 +59,9 @@ message LoginReply {
   string police_type = 3;
   string police_city = 4;
   string police_dept = 5;
-  string police_station = 6;
-  bytes police_portrait = 7;
+  string police_squad = 6;
+  string police_section = 7;
+  bytes police_portrait = 8;
 }
 
 message PasswordRequest {

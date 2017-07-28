@@ -9,6 +9,8 @@ import (
  "net"
  "sync"
 
+ // "io/ioutil"
+
  "golang.org/x/net/context"
  "google.golang.org/grpc"
 
@@ -52,7 +54,9 @@ type PoliceDoc struct {
 	Type        string   `json:"type"`
 	City        string   `json:"city"`
 	Dept        string   `json:"dept"`
-	Station     string   `json:"station"`
+	Squad       string   `json:"squad"`
+	Section     string   `json:"section"`
+	Portrait    []byte   `bson:"portrait"`
 }
 
 type TicketStatsDoc struct {
@@ -99,10 +103,10 @@ type TicketDoc struct {
 	Address         string    `json:"address"`
 	Longitude       float64   `json:"longitude"`
 	Latitude        float64   `json:"latitude"`
-	MapImage        []byte    `json:"mapimage"`
-	FarImage        []byte    `json:"farimage"`
-	CloseImage      []byte    `json:"closeimage"`
-	TicketImage     []byte    `json:"ticketimage"`
+	MapImage        []byte    `bson:"mapimage"`
+	FarImage        []byte    `bson:"farimage"`
+	CloseImage      []byte    `bson:"closeimage"`
+	TicketImage     []byte    `bson:"ticketimage"`
 }
 
 type TicketRangeDoc struct {
@@ -272,7 +276,9 @@ func (s *ticketServer) RhinoLogin(ctx context.Context, loginInfo *pb.LoginReques
 		PoliceType: policeDoc.Type,
 		PoliceCity: policeDoc.City,
 		PoliceDept: policeDoc.Dept,
-		PoliceStation: policeDoc.Station}, nil
+		PoliceSquad: policeDoc.Squad,
+		PoliceSection: policeDoc.Section,
+		PolicePortrait: policeDoc.Portrait}, nil
 }
 
 func (s *ticketServer) RhinoCreateAccount(ctx context.Context, policeInfo *pb.AccountRequest) (*pb.AccountReply, error) {
@@ -285,7 +291,9 @@ func (s *ticketServer) RhinoCreateAccount(ctx context.Context, policeInfo *pb.Ac
 		Type: policeInfo.PoliceType,
 		City: policeInfo.PoliceCity,
 		Dept: policeInfo.PoliceDept,
-		Station: policeInfo.PoliceStation})
+		Squad: policeInfo.PoliceSquad,
+		Section: policeInfo.PoliceSection,
+		Portrait: policeInfo.PolicePortrait})
 	if err != nil {
 		if mgo.IsDup(err) {
 			return &pb.AccountReply{CreateSuccess: false}, err
@@ -324,7 +332,9 @@ func (s *ticketServer) RhinoChangePassword(ctx context.Context, loginInfo *pb.Pa
 		PoliceType: policeDoc.Type,
 		PoliceCity: policeDoc.City,
 		PoliceDept: policeDoc.Dept,
-		PoliceStation: policeDoc.Station}, nil
+		PoliceSquad: policeDoc.Squad,
+		PoliceSection: policeDoc.Section,
+		PolicePortrait: policeDoc.Portrait}, nil
 }
 
 func (s *ticketServer) HareLogin(ctx context.Context, loginInfo *pb.LoginRequest) (*pb.LoginReply, error) {
@@ -350,7 +360,9 @@ func (s *ticketServer) HareLogin(ctx context.Context, loginInfo *pb.LoginRequest
 		PoliceType: policeDoc.Type,
 		PoliceCity: policeDoc.City,
 		PoliceDept: policeDoc.Dept,
-		PoliceStation: policeDoc.Station}, nil
+		PoliceSquad: policeDoc.Squad,
+		PoliceSection: policeDoc.Section,
+		PolicePortrait: policeDoc.Portrait}, nil
 }
 
 func (s *ticketServer) HareCreateAccount(ctx context.Context, policeInfo *pb.AccountRequest) (*pb.AccountReply, error) {
@@ -363,7 +375,9 @@ func (s *ticketServer) HareCreateAccount(ctx context.Context, policeInfo *pb.Acc
 		Type: policeInfo.PoliceType,
 		City: policeInfo.PoliceCity,
 		Dept: policeInfo.PoliceDept,
-		Station: policeInfo.PoliceStation})
+		Squad: policeInfo.PoliceSquad,
+		Section: policeInfo.PoliceSection,
+		Portrait: policeInfo.PolicePortrait})
 	if err != nil {
 		if mgo.IsDup(err) {
 			return &pb.AccountReply{CreateSuccess: false}, err
@@ -402,7 +416,9 @@ func (s *ticketServer) HareChangePassword(ctx context.Context, loginInfo *pb.Pas
 		PoliceType: policeDoc.Type,
 		PoliceCity: policeDoc.City,
 		PoliceDept: policeDoc.Dept,
-		PoliceStation: policeDoc.Station}, nil
+		PoliceSquad: policeDoc.Squad,
+		PoliceSection: policeDoc.Section,
+		PolicePortrait: policeDoc.Portrait}, nil
 }
 
 
@@ -419,7 +435,6 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 			ticketInfo.Year, ticketInfo.Month, ticketInfo.Day, ticketInfo.Hour, ticketInfo.Minute, ticketInfo.Address)
 	createFile(ticketPath)
 	writeFile(ticketPath, ticketContent)
-
 
 	// Write img.jpg
 	imgPath := fmt.Sprintf("%s/image1_%d.jpg", directoryPath, ticketInfo.TicketId)
