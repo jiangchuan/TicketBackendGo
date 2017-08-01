@@ -337,6 +337,29 @@ func (s *ticketServer) RhinoChangePassword(ctx context.Context, loginInfo *pb.Pa
 		PolicePortrait: policeDoc.Portrait}, nil
 }
 
+func (s *ticketServer) PullHare(ctx context.Context, loginInfo *pb.HareRequest) (*pb.HareReply, error) {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("polices").C("policedocs")
+	var policeDoc PoliceDoc
+	err := c.Find(bson.M{"userid": loginInfo.Sid}).One(&policeDoc)
+	if err != nil {
+		log.Println("Failed find police: ", err)
+		return &pb.HareReply{HareSuccess: false}, err
+	}
+	if policeDoc.UserID == "" {
+		log.Println("Police not found:!")
+		return &pb.HareReply{HareSuccess: false}, err
+	}
+	return &pb.HareReply{  HareSuccess: true,
+		PoliceName: policeDoc.Name,
+		PoliceType: policeDoc.Type,
+		PoliceCity: policeDoc.City,
+		PoliceDept: policeDoc.Dept,
+		PoliceSquad: policeDoc.Squad,
+		PoliceSection: policeDoc.Section}, nil
+}
+
 func (s *ticketServer) HareLogin(ctx context.Context, loginInfo *pb.LoginRequest) (*pb.LoginReply, error) {
 	session := dbSession.Copy()
 	defer session.Close()
@@ -621,9 +644,46 @@ func (s *ticketServer) PullTicketStats(ctx context.Context, pullTicketStatsReque
 					UploadedTicketCount: ticketStatsDoc.UploadedTicketCount}, nil
 }
 
-func (s *ticketServer) PullTicket(rect *pb.PullTicketRequest, stream pb.Ticket_PullTicketServer) error {
+func (s *ticketServer) PullTicket(pullTicketRequest *pb.PullTicketRequest, stream pb.Ticket_PullTicketServer) error {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("tickets").C("ticketdocs")
+
+	var allTickets []TicketDoc
+	err := c.Find(bson.M{"userid": pullTicketRequest.Sid}).All(&allTickets)
+	// err = c.Find(bson.M{"userid": pullTicketRequest.Sid}).Sort("-timestamp").All(&allTickets)
+	if err != nil {
+		log.Println("Failed find police tickets: ", err)
+		return nil
+	}
+
+	for _, details := range allTickets {
+		var p = pb.TicketDetails{  TicketId: details.TicketID,
+					UserId: details.UserID,
+					LicenseNum: details.LicenseNum,
+					LicenseColor: details.LicenseColor,
+					LicenseCorrect: true,
+					VehicleType: details.VehicleType,
+					VehicleColor: details.VehicleColor,
+					Year: details.Year,
+					Month: details.Month,
+					Day: details.Day,
+					Hour: details.Hour,
+					Minute: details.Minute,
+					Address: details.Address,
+					Longitude: details.Longitude,
+					Latitude: details.Latitude,
+					MapImage: details.MapImage,
+					FarImage: details.FarImage,
+					CloseImage: details.CloseImage,
+					TicketImage: details.TicketImage}
+		if err := stream.Send(&p); err != nil {
+			return err
+		}
+	}
 	return nil
 }
+
 
 ////////// Read and Write Files //////////
 func createDirectory(directoryPath string) {
