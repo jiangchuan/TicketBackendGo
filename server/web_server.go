@@ -75,8 +75,7 @@ func main() {
 func myAuthFunc(user, pass string, r *http.Request) bool {
 	session := dbSession.Copy()
 	defer session.Close()
-	c := session.DB("polices").C("policedocs")
-	// c := session.DB("polices").C("staffdocs")
+	c := session.DB("polices").C("officerdocs")
 	var policeDoc PoliceDoc
 	err := c.Find(bson.M{"userid": user}).One(&policeDoc)
 	if err != nil {

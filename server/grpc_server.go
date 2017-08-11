@@ -156,7 +156,7 @@ func removeSlaveSubmit(name string) {
 func (s *ticketServer) SlaveLocSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
 	session := dbSession.Copy()
 	defer session.Close()
-	c := session.DB("policelocs").C("policelocdocs")
+	c := session.DB("polices").C("policelocdocs")
 	var p = PoliceLocDoc{UserID: slaveLoc.Sid,
 		Longitude: slaveLoc.Longitude,
 		Latitude: slaveLoc.Latitude}
@@ -180,7 +180,7 @@ func Min(x, y int32) int32 {
 func (s *ticketServer) SlaveAnchorSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
 	session := dbSession.Copy()
 	defer session.Close()
-	c := session.DB("policelocs").C("policeanchordocs")
+	c := session.DB("polices").C("policeanchordocs")
 
 	var policeAnchorDoc PoliceAnchorDoc
 	err := c.Find(bson.M{"userid": slaveLoc.Sid}).One(&policeAnchorDoc)
@@ -577,7 +577,7 @@ func (s *ticketServer) SubmitTicketStats(ctx context.Context, ticketStats *pb.Ti
 func (s *ticketServer) PullLocation(rect *pb.PullLocRequest, stream pb.Ticket_PullLocationServer) error {
 	session := dbSession.Copy()
 	defer session.Close()
-	c := session.DB("policelocs").C("policelocdocs")
+	c := session.DB("polices").C("policelocdocs")
 
     var slaveLocs []PoliceLocDoc
     err := c.Find(bson.M{}).All(&slaveLocs)
@@ -598,7 +598,7 @@ func (s *ticketServer) PullLocation(rect *pb.PullLocRequest, stream pb.Ticket_Pu
 func (s *ticketServer) PullAnchors(ctx context.Context, pullAnchorRequest *pb.PullAnchorRequest) (*pb.SlaveAnchors, error) {
 	session := dbSession.Copy()
 	defer session.Close()
-	c := session.DB("policelocs").C("policeanchordocs")
+	c := session.DB("polices").C("policeanchordocs")
 	var slaveAnchorsDoc PoliceAnchorDoc
 	err := c.Find(bson.M{"userid": pullAnchorRequest.Sid}).One(&slaveAnchorsDoc)
 	if err != nil {
@@ -824,7 +824,7 @@ func ensureIndex(s *mgo.Session) {
 		panic(err)
 	}
 
-	c = session.DB("policelocs").C("policelocdocs")
+	c = session.DB("polices").C("policelocdocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,
@@ -837,7 +837,7 @@ func ensureIndex(s *mgo.Session) {
 		panic(err)
 	}
 
-	c = session.DB("policelocs").C("policeanchordocs")
+	c = session.DB("polices").C("policeanchordocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,

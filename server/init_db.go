@@ -22,7 +22,6 @@ type PoliceDoc struct {
 	Portrait     []byte   `bson:"portrait"`
 }
 
-
 ////////// MongoDB //////////
 func ensureIndex(s *mgo.Session) {
 	session := s.Copy()
@@ -56,12 +55,7 @@ func ensureIndex(s *mgo.Session) {
 
 }
 
-
-
-
-
 func insertPolice(mUserID, mPassword, mName, mType, mCity, mDept, mSquad, mSection, mPortraitPath, db, dbdocs string, session *mgo.Session) {
-
 	// Read image to []byte
 	f, err := os.Open(mPortraitPath)
 	if err != nil {
@@ -72,20 +66,14 @@ func insertPolice(mUserID, mPassword, mName, mType, mCity, mDept, mSquad, mSecti
 	if err != nil {
 		log.Fatalln("Failed to read image: ", err.Error())		
 	}
-
 	// Insert to MongoDB
 	var p = PoliceDoc{UserID: mUserID, Password: mPassword, Name: mName, Type: mType, City: mCity, Dept: mDept, Squad: mSquad, Section: mSection, Portrait: bs}
-
-	// session := s.Copy()
-	// defer session.Close()
-
 	c := session.DB(db).C(dbdocs)
 	// c := session.DB("polices").C("policedocs")
   	_, err = c.UpsertId(p.UserID, &p)
 	if err != nil {
 		log.Println("Failed to insert or update record: ", err)
 	}
-
 }
 
 func main() {
