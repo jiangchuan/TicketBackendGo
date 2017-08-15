@@ -115,6 +115,11 @@ type TicketRangeDoc struct {
 	TicketIDEnd      int64     `json:"ticketidend"`
 }
 
+type PerformanceDoc struct {
+	UserID         string   `json:"userid"`
+	TicketCount    int32    `json:"ticketcount"`
+}
+
 var masterReceiveMap = make(map[string]chan pb.SlaveLoc, 100)
 var slaveSubmitMap = make(map[string]chan pb.MasterOrder, 100)
 
@@ -592,6 +597,55 @@ func (s *ticketServer) PullLocation(rect *pb.PullLocRequest, stream pb.Ticket_Pu
 			return err
 		}
 	}
+	return nil
+}
+
+func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream pb.Ticket_PullPerformanceServer) error {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("polices").C("policedocs")
+
+    var slaves []PoliceDoc
+    err := c.Find(bson.M{}).All(&slaves)
+    if err != nil {
+		log.Println("Failed to find polices: ", err)
+		return err
+    }
+
+    var ticket_count_day int32 = 0
+    var ticket_count_month int32 = 0
+	var performanceDoc PerformanceDoc
+
+	for _, slave := range slaves {
+		c = session.DB("polices").C("dayperformancedocs")
+		err = c.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
+		if err != nil || performanceDoc.UserID == "" {
+			log.Println("No police performance day: ", err)
+			ticket_count_day = 0
+		} else {
+			ticket_count_day = performanceDoc.TicketCount	
+		}
+
+		c = session.DB("polices").C("monthperformancedocs")
+		err = c.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
+		if err != nil || performanceDoc.UserID == "" {
+			log.Println("No police performance month: ", err)
+			ticket_count_month = 0
+		} else {
+			ticket_count_month = performanceDoc.TicketCount	
+		}
+
+		if err := stream.Send(&pb.SlavePerformance{  Sid: slave.UserID,
+					PoliceName: slave.Name,
+					PoliceDept: slave.Dept,
+					TicketCountDay: ticket_count_day,
+					TicketCountWeek: ticket_count_day,
+					TicketCountMonth: ticket_count_month}); err != nil {
+			return err
+		}
+	}
+
+	log.Println("Finished PullPerformance")
 	return nil
 }
 

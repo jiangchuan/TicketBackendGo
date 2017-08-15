@@ -24,6 +24,7 @@ service Ticket {
   rpc MasterReceive(stream MasterOrder) returns (stream SlaveLoc) {}
 
   rpc PullLocation (PullLocRequest) returns (stream SlaveLoc) {}
+  rpc PullPerformance (PullPerformanceRequest) returns (stream SlavePerformance) {}
   rpc PullAnchors (PullAnchorRequest) returns (SlaveAnchors) {}
   rpc PullTicketStats (PullTicketStatsRequest) returns (TicketStats) {}
   rpc PullTicket (PullTicketRequest) returns (stream TicketDetails) {}
@@ -125,6 +126,10 @@ message PullLocRequest {
   string mid = 1;
 }
 
+message PullPerformanceRequest {
+  string mid = 1;
+}
+
 message PullAnchorRequest {
   string sid = 1;
 }
@@ -141,6 +146,15 @@ message SlaveLoc {
   string sid = 1;
   double longitude = 2;
   double latitude = 3;
+}
+
+message SlavePerformance {
+  string sid = 1;
+  string police_name = 2;
+  string police_dept = 3;
+  int32 ticket_count_day = 4;
+  int32 ticket_count_week = 5;
+  int32 ticket_count_month = 6;
 }
 
 message MasterOrder {
