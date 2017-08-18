@@ -91,21 +91,20 @@ message TicketDetails {
   string user_id = 2;
   string license_num = 3;
   string license_color = 4;
-  bool license_correct = 5;
-  string vehicle_type = 6;
-  string vehicle_color = 7;
-  int32 year = 8;
-  int32 month = 9;
-  int32 day = 10;
-  int32 hour = 11;
-  int32 minute = 12;
-  string address = 13;
-  double longitude = 14;
-  double latitude = 15;
-  bytes map_image = 16;
-  bytes far_image = 17;
-  bytes close_image = 18;
-  bytes ticket_image = 19;
+  string vehicle_type = 5;
+  string vehicle_color = 6;
+  int32 year = 7;
+  int32 month = 8;
+  int32 day = 9;
+  int32 hour = 10;
+  int32 minute = 11;
+  string address = 12;
+  double longitude = 13;
+  double latitude = 14;
+  bytes map_image = 15;
+  bytes far_image = 16;
+  bytes close_image = 17;
+  bytes ticket_image = 18;
 }
 
 message RecordReply {

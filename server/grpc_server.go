@@ -716,7 +716,6 @@ func (s *ticketServer) PullTicket(pullTicketRequest *pb.PullTicketRequest, strea
 					UserId: details.UserID,
 					LicenseNum: details.LicenseNum,
 					LicenseColor: details.LicenseColor,
-					LicenseCorrect: true,
 					VehicleType: details.VehicleType,
 					VehicleColor: details.VehicleColor,
 					Year: details.Year,
