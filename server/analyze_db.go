@@ -8,13 +8,6 @@ import (
  "time"
 )
 
-const (
-	INTERVAL_PERIOD time.Duration = time.Hour
-	HOUR_TO_TICK int = 7
-	MINUTE_TO_TICK int = 0
-	SECOND_TO_TICK int = 0
-)
-
 type PerformanceDoc struct {
 	UserID         string   `json:"userid"`
 	TicketCount    int32    `json:"ticketcount"`
@@ -67,6 +60,7 @@ func ensureIndex(s *mgo.Session) {
 }
 
 func analyzedb() {
+	fmt.Println("analyzing ... ")
 	session, err := mgo.Dial("localhost")
 	if err != nil {
 		panic(err)
@@ -113,63 +107,12 @@ func analyzedb() {
     }
 }
 
-func updateTicker() *time.Ticker {
-	nextTick := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), HOUR_TO_TICK, MINUTE_TO_TICK, SECOND_TO_TICK, 0, time.Local)
-	if !nextTick.After(time.Now()) {
-		nextTick = nextTick.Add(INTERVAL_PERIOD)
-	}
-	fmt.Println(nextTick, "- next analyze db")
-	diff := nextTick.Sub(time.Now())
-	return time.NewTicker(diff)
-}
-
 func main() {
-	// zipDayTickets("2017-8-6")
-	ticker := updateTicker()
-    for {
-		<-ticker.C
+	analyzedb()
+	for range time.Tick(time.Hour) {
 		analyzedb()
-		fmt.Println(time.Now(), "- just analyzed db")
-		ticker = updateTicker()
-    }
+	}
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
