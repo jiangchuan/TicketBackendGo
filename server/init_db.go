@@ -1,12 +1,10 @@
 package main
 
 import (
- // "fmt"
  "log"
  "io/ioutil"
  "os"
  "gopkg.in/mgo.v2"
- // "gopkg.in/mgo.v2/bson"
 
 )
 
@@ -19,7 +17,8 @@ type PoliceDoc struct {
 	Dept        string   `json:"dept"`
 	Squad       string   `json:"squad"`
 	Section     string   `json:"section"`
-	Portrait     []byte   `bson:"portrait"`
+	Portrait    []byte   `bson:"portrait"`
+	Thumbnail   []byte   `bson:"thumbnail"`
 }
 
 ////////// MongoDB //////////
@@ -55,22 +54,26 @@ func ensureIndex(s *mgo.Session) {
 
 }
 
-func insertPolice(mUserID, mPassword, mName, mType, mCity, mDept, mSquad, mSection, mPortraitPath, db, dbdocs string, session *mgo.Session) {
-	// Read image to []byte
-	f, err := os.Open(mPortraitPath)
+func readFile2Bytes(filePath string) []byte {
+	f, err := os.Open(filePath)
 	if err != nil {
-		log.Fatalln("Failed to open image: ", err.Error())
+		log.Println("Failed to open %s", filePath, err)
+		return nil
 	}
 	defer f.Close()
 	bs, err := ioutil.ReadAll(f)
 	if err != nil {
-		log.Fatalln("Failed to read image: ", err.Error())		
+		log.Println("Failed to read %s", filePath, err)
+		return nil
 	}
+	return bs
+}
+
+func insertPolice(mUserID, mPassword, mName, mType, mCity, mDept, mSquad, mSection, mPortraitPath, mThumbnailPath, db, dbdocs string, session *mgo.Session) {
 	// Insert to MongoDB
-	var p = PoliceDoc{UserID: mUserID, Password: mPassword, Name: mName, Type: mType, City: mCity, Dept: mDept, Squad: mSquad, Section: mSection, Portrait: bs}
+	var p = PoliceDoc{UserID: mUserID, Password: mPassword, Name: mName, Type: mType, City: mCity, Dept: mDept, Squad: mSquad, Section: mSection, Portrait: readFile2Bytes(mPortraitPath), Thumbnail: readFile2Bytes(mThumbnailPath)}
 	c := session.DB(db).C(dbdocs)
-	// c := session.DB("polices").C("policedocs")
-  	_, err = c.UpsertId(p.UserID, &p)
+  	_, err := c.UpsertId(p.UserID, &p)
 	if err != nil {
 		log.Println("Failed to insert or update record: ", err)
 	}
@@ -89,16 +92,16 @@ func main() {
 	ensureIndex(session)
 
 	//           UserID    Password  Name     Type   City   Dept                Squad      Section   PortraitPath  db         dbdocs        session
-	insertPolice("X285301", "123",   "张警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第三警区", "./portraits/X285301.jpg", "polices", "policedocs", session)
-	insertPolice("X285302", "123",   "王警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第三警区", "./portraits/X285302.jpg", "polices", "policedocs", session)
-	insertPolice("X285303", "123",   "李警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第三警区", "./portraits/X285303.jpg", "polices", "policedocs", session)
-	insertPolice("X285401", "123",   "赵警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第四警区", "./portraits/X285401.jpg", "polices", "policedocs", session)
-	insertPolice("X285402", "123",   "钱警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第四警区", "./portraits/X285402.jpg", "polices", "policedocs", session)
-	insertPolice("X285403", "123",   "孙警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第四警区", "./portraits/X285403.jpg", "polices", "policedocs", session)
+	insertPolice("X285301", "123",   "张警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第三警区", "./portraits/p_X285301.jpg", "./portraits/t_X285302.jpg", "polices", "policedocs", session)
+	insertPolice("X285302", "123",   "王警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第三警区", "./portraits/p_X285302.jpg", "./portraits/t_X285302.jpg", "polices", "policedocs", session)
+	insertPolice("X285303", "123",   "李警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第三警区", "./portraits/p_X285303.jpg", "./portraits/t_X285302.jpg", "polices", "policedocs", session)
+	insertPolice("X285401", "123",   "赵警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第四警区", "./portraits/p_X285401.jpg", "./portraits/t_X285302.jpg", "polices", "policedocs", session)
+	insertPolice("X285402", "123",   "钱警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第四警区", "./portraits/p_X285402.jpg", "./portraits/t_X285302.jpg", "polices", "policedocs", session)
+	insertPolice("X285403", "123",   "孙警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第四警区", "./portraits/p_X285403.jpg", "./portraits/t_X285302.jpg", "polices", "policedocs", session)
 
-	insertPolice("005697", "123",   "余警官", "领导", "成都", "成都公安局交警五分局", "第二大队", "大队长", "./portraits/005697.jpg", "polices", "officerdocs", session)
+	insertPolice("005697", "123",   "余警官", "领导", "成都", "成都公安局交警五分局", "第二大队", "大队长", "./portraits/p_005697.jpg", "./portraits/t_X285302.jpg", "polices", "officerdocs", session)
 
-	insertPolice("Admin", "123",   "黄江龙", "系统管理员", "成都", "成都公安局交警五分局", "第二大队", "系统管理员", "./portraits/Admin.jpg", "polices", "officerdocs", session)
+	insertPolice("Admin", "123",   "黄江龙", "系统管理员", "成都", "成都公安局交警五分局", "第二大队", "系统管理员", "./portraits/p_Admin.jpg", "./portraits/t_X285302.jpg", "polices", "officerdocs", session)
 
 }
 

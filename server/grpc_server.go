@@ -590,10 +590,24 @@ func (s *ticketServer) PullLocation(rect *pb.PullLocRequest, stream pb.Ticket_Pu
 		log.Println("Failed find police locations: ", err)
 		return err
     }
+
+	var policeDoc PoliceDoc
+	c = session.DB("polices").C("policedocs")
 	for _, slaveLoc := range slaveLocs {
-		if err := stream.Send(&pb.SlaveLoc{  Sid: slaveLoc.UserID,
+    	err = c.Find(bson.M{"userid": slaveLoc.UserID}).One(&policeDoc)
+		if err != nil || policeDoc.UserID == "" {
+			log.Println("No police found: ", err)
+			if err = stream.Send(&pb.SlaveNameLoc{Sid: slaveLoc.UserID,
+					PoliceName: slaveLoc.UserID,
 					Longitude: slaveLoc.Longitude,
 					Latitude: slaveLoc.Latitude}); err != nil {
+				return err
+			}
+		}
+		if err = stream.Send(&pb.SlaveNameLoc{  Sid: slaveLoc.UserID,
+				PoliceName: policeDoc.Name,
+				Longitude: slaveLoc.Longitude,
+				Latitude: slaveLoc.Latitude}); err != nil {
 			return err
 		}
 	}
@@ -616,9 +630,10 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
     var ticket_count_month int32 = 0
 	var performanceDoc PerformanceDoc
 
+	c_day := session.DB("polices").C("dayperformancedocs")
+	c_month := session.DB("polices").C("monthperformancedocs")
 	for _, slave := range slaves {
-		c = session.DB("polices").C("dayperformancedocs")
-		err = c.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
+		err = c_day.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
 		if err != nil || performanceDoc.UserID == "" {
 			log.Println("No police performance day: ", err)
 			ticket_count_day = 0
@@ -626,8 +641,7 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 			ticket_count_day = performanceDoc.TicketCount	
 		}
 
-		c = session.DB("polices").C("monthperformancedocs")
-		err = c.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
+		err = c_month.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
 		if err != nil || performanceDoc.UserID == "" {
 			log.Println("No police performance month: ", err)
 			ticket_count_month = 0
@@ -742,10 +756,9 @@ func (s *ticketServer) PullTicket(pullTicketRequest *pb.PullTicketRequest, strea
 func createDirectory(directoryPath string) {
 	//choose your permissions well
 	err := os.MkdirAll(directoryPath, 0777)
- 
 	//check if you need to panic, fallback or report
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println("Failed to create %s", directoryPath, err)
 	}
 }
 
@@ -770,14 +783,14 @@ func writeFile(path string, content string) {
 	// write some text to file
 	_, err = file.WriteString(content)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println("Failed to write string ", err)
 		return //must return here for defer statements to be called
 	}
 
 	// save changes
 	err = file.Sync()
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println("Failed to save changes ", err)
 		return //same as above
 	}
 }
@@ -791,14 +804,14 @@ func writeImage(path string, content []byte) {
 	// write some text to file
 	_, err = file.Write(content)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println("Failed to write files ", err)
 		return //must return here for defer statements to be called
 	}
 
 	// save changes
 	err = file.Sync()
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println("Failed to save changes ", err)
 		return //same as above
 	}
 }
@@ -828,7 +841,7 @@ func deleteFile(path string) {
 
 func checkError(err error) {
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println(err)
 		os.Exit(0)
 	}
 }
