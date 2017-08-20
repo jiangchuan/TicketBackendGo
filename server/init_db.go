@@ -98,6 +98,8 @@ func main() {
 
 	insertPolice("005697", "123",   "余警官", "领导", "成都", "成都公安局交警五分局", "第二大队", "大队长", "./portraits/005697.jpg", "polices", "officerdocs", session)
 
+	insertPolice("Admin", "123",   "黄江龙", "系统管理员", "成都", "成都公安局交警五分局", "第二大队", "系统管理员", "./portraits/Admin.jpg", "polices", "officerdocs", session)
+
 }
 
 
