@@ -44,6 +44,19 @@ func ensureIndex(s *mgo.Session) {
 		panic(err)
 	}
 
+	c = session.DB("polices").C("weekperformancedocs")
+	index = mgo.Index{
+		Key:        []string{"userid"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
 	c = session.DB("polices").C("monthperformancedocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
@@ -73,7 +86,9 @@ func analyzedb() {
 	c := session.DB("tickets").C("ticketdocs")
 
 	mNow := time.Now()
+	_, thisWeek := mNow.ISOWeek()
 	stage_match_day := bson.M{"$match": bson.M{"year": mNow.Year(), "month": int(mNow.Month()), "day": mNow.Day()}}
+	stage_match_week := bson.M{"$match": bson.M{"year": mNow.Year(), "month": int(mNow.Month()), "week": thisWeek}}
 	stage_match_month := bson.M{"$match": bson.M{"year": mNow.Year(), "month": int(mNow.Month())}}
     stage_aggregate := bson.M{"$group": bson.M{
 	        "_id": "$userid",
@@ -82,12 +97,23 @@ func analyzedb() {
 	    }}
 
 	pipe_day := c.Pipe([]bson.M{stage_match_day, stage_aggregate})
+	pipe_week := c.Pipe([]bson.M{stage_match_week, stage_aggregate})
 	pipe_month := c.Pipe([]bson.M{stage_match_month, stage_aggregate})
 	var result PerformanceDoc
 
 
 	iter := pipe_day.Iter()
 	c = session.DB("polices").C("dayperformancedocs")
+    for iter.Next(&result) {
+    	fmt.Println(result)
+	  	_, err = c.UpsertId(result.UserID, &result)
+		if err != nil {
+			log.Println("Failed to insert or update record: ", err)
+		}
+    }
+
+	iter = pipe_week.Iter()
+	c = session.DB("polices").C("weekperformancedocs")
     for iter.Next(&result) {
     	fmt.Println(result)
 	  	_, err = c.UpsertId(result.UserID, &result)

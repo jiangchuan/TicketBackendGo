@@ -10,7 +10,7 @@ service Ticket {
   rpc RhinoCreateAccount (AccountRequest) returns (AccountReply) {}
   rpc RhinoLogin (LoginRequest) returns (LoginReply) {}
   rpc RhinoChangePassword (PasswordRequest) returns (LoginReply) {}
-  rpc PullHare (HareRequest) returns (HareReply) {}
+  rpc PullHare (HareRequest) returns (HareDetails) {}
 
   rpc HareCreateAccount (AccountRequest) returns (AccountReply) {}
   rpc HareLogin (LoginRequest) returns (LoginReply) {}
@@ -70,7 +70,7 @@ message HareRequest {
   string sid = 1;
 }
 
-message HareReply {
+message HareDetails {
   bool hare_success = 1;
   string police_name = 2;
   string police_type = 3;
@@ -95,16 +95,17 @@ message TicketDetails {
   string vehicle_color = 6;
   int32 year = 7;
   int32 month = 8;
-  int32 day = 9;
-  int32 hour = 10;
-  int32 minute = 11;
-  string address = 12;
-  double longitude = 13;
-  double latitude = 14;
-  bytes map_image = 15;
-  bytes far_image = 16;
-  bytes close_image = 17;
-  bytes ticket_image = 18;
+  int32 week = 9;
+  int32 day = 10;
+  int32 hour = 11;
+  int32 minute = 12;
+  string address = 13;
+  double longitude = 14;
+  double latitude = 15;
+  bytes map_image = 16;
+  bytes far_image = 17;
+  bytes close_image = 18;
+  bytes ticket_image = 19;
 }
 
 message RecordReply {
@@ -158,9 +159,11 @@ message SlavePerformance {
   string sid = 1;
   string police_name = 2;
   string police_dept = 3;
-  int32 ticket_count_day = 4;
-  int32 ticket_count_week = 5;
-  int32 ticket_count_month = 6;
+  int32 saved_ticket_count = 4;
+  int32 uploaded_ticket_count = 5;
+  int32 ticket_count_day = 6;
+  int32 ticket_count_week = 7;
+  int32 ticket_count_month = 8;
 }
 
 message MasterOrder {

@@ -97,6 +97,7 @@ type TicketDoc struct {
 	VehicleColor    string    `json:"vehiclecolor"`
 	Year            int32     `json:"year"`
 	Month           int32     `json:"month"`
+	Week            int32     `json:"week"`
 	Day             int32     `json:"day"`
 	Hour            int32     `json:"hour"`
 	Minute          int32     `json:"minute"`
@@ -342,7 +343,7 @@ func (s *ticketServer) RhinoChangePassword(ctx context.Context, loginInfo *pb.Pa
 		PolicePortrait: policeDoc.Portrait}, nil
 }
 
-func (s *ticketServer) PullHare(ctx context.Context, loginInfo *pb.HareRequest) (*pb.HareReply, error) {
+func (s *ticketServer) PullHare(ctx context.Context, loginInfo *pb.HareRequest) (*pb.HareDetails, error) {
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("policedocs")
@@ -350,13 +351,13 @@ func (s *ticketServer) PullHare(ctx context.Context, loginInfo *pb.HareRequest) 
 	err := c.Find(bson.M{"userid": loginInfo.Sid}).One(&policeDoc)
 	if err != nil {
 		log.Println("Failed find police: ", err)
-		return &pb.HareReply{HareSuccess: false}, err
+		return &pb.HareDetails{HareSuccess: false}, err
 	}
 	if policeDoc.UserID == "" {
 		log.Println("Police not found:!")
-		return &pb.HareReply{HareSuccess: false}, err
+		return &pb.HareDetails{HareSuccess: false}, err
 	}
-	return &pb.HareReply{  HareSuccess: true,
+	return &pb.HareDetails{HareSuccess: true,
 		PoliceName: policeDoc.Name,
 		PoliceType: policeDoc.Type,
 		PoliceCity: policeDoc.City,
@@ -488,6 +489,7 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 		VehicleColor: ticketInfo.VehicleColor,
 		Year: ticketInfo.Year,
 		Month: ticketInfo.Month,
+		Week: ticketInfo.Week,
 		Day: ticketInfo.Day,
 		Hour: ticketInfo.Hour,
 		Minute: ticketInfo.Minute,
@@ -626,19 +628,46 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 		return err
     }
 
+
+    var saved_ticket_count int32 = 0
+    var uploaded_ticket_count int32 = 0
     var ticket_count_day int32 = 0
+    var ticket_count_week int32 = 0
     var ticket_count_month int32 = 0
+
 	var performanceDoc PerformanceDoc
+	var ticketStatsDoc TicketStatsDoc
 
 	c_day := session.DB("polices").C("dayperformancedocs")
+	c_week := session.DB("polices").C("weekperformancedocs")
 	c_month := session.DB("polices").C("monthperformancedocs")
+	c_ticket_stat := session.DB("polices").C("ticketstatsdocs")
+
 	for _, slave := range slaves {
+		err = c_ticket_stat.Find(bson.M{"userid": slave.UserID}).One(&ticketStatsDoc)
+		if err != nil || ticketStatsDoc.UserID == "" {
+			log.Println("No ticket stats: ", err)
+			saved_ticket_count = 0
+			uploaded_ticket_count = 0
+		} else {
+			saved_ticket_count = ticketStatsDoc.SavedTicketCount	
+			uploaded_ticket_count = ticketStatsDoc.UploadedTicketCount	
+		}
+
 		err = c_day.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
 		if err != nil || performanceDoc.UserID == "" {
 			log.Println("No police performance day: ", err)
 			ticket_count_day = 0
 		} else {
 			ticket_count_day = performanceDoc.TicketCount	
+		}
+
+		err = c_week.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
+		if err != nil || performanceDoc.UserID == "" {
+			log.Println("No police performance week: ", err)
+			ticket_count_week = 0
+		} else {
+			ticket_count_week = performanceDoc.TicketCount	
 		}
 
 		err = c_month.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
@@ -652,8 +681,10 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 		if err := stream.Send(&pb.SlavePerformance{  Sid: slave.UserID,
 					PoliceName: slave.Name,
 					PoliceDept: slave.Dept,
+					SavedTicketCount: saved_ticket_count,
+					UploadedTicketCount: uploaded_ticket_count,
 					TicketCountDay: ticket_count_day,
-					TicketCountWeek: ticket_count_day,
+					TicketCountWeek: ticket_count_week,
 					TicketCountMonth: ticket_count_month}); err != nil {
 			return err
 		}
@@ -734,6 +765,7 @@ func (s *ticketServer) PullTicket(pullTicketRequest *pb.PullTicketRequest, strea
 					VehicleColor: details.VehicleColor,
 					Year: details.Year,
 					Month: details.Month,
+					Week: details.Week,
 					Day: details.Day,
 					Hour: details.Hour,
 					Minute: details.Minute,
