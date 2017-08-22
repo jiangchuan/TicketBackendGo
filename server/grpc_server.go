@@ -185,6 +185,10 @@ func Min(x, y int32) int32 {
 }
 
 func (s *ticketServer) SlaveAnchorSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
+	if !latLonInChina(slaveLoc.Longitude, slaveLoc.Latitude) {
+		return &pb.MasterOrder{MasterOrder: "Lat-Lon out of China!"}, nil
+	}
+
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("policeanchordocs")
@@ -689,7 +693,7 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 
 		err = c_day.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
 		if err != nil || performanceDoc.UserID == "" {
-			log.Println("No police performance day: ", err)
+			// log.Println("No police performance day: ", err)
 			ticket_count_day = 0
 		} else {
 			ticket_count_day = performanceDoc.TicketCount	
@@ -697,7 +701,7 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 
 		err = c_week.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
 		if err != nil || performanceDoc.UserID == "" {
-			log.Println("No police performance week: ", err)
+			// log.Println("No police performance week: ", err)
 			ticket_count_week = 0
 		} else {
 			ticket_count_week = performanceDoc.TicketCount	
@@ -705,7 +709,7 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 
 		err = c_month.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
 		if err != nil || performanceDoc.UserID == "" {
-			log.Println("No police performance month: ", err)
+			// log.Println("No police performance month: ", err)
 			ticket_count_month = 0
 		} else {
 			ticket_count_month = performanceDoc.TicketCount	
@@ -727,7 +731,16 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 	return nil
 }
 
+func latLonInChina(longitude, latitude float64) bool {
+    if (longitude > 73 && longitude < 135 && latitude > 20 && latitude < 54) {
+        return true;
+    }
+    return false;
+}
+
+
 func (s *ticketServer) PullAnchors(ctx context.Context, pullAnchorRequest *pb.PullAnchorRequest) (*pb.SlaveAnchors, error) {
+	fmt.Println("Entered pull anchors")
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("policeanchordocs")
