@@ -57,6 +57,7 @@ type PoliceDoc struct {
 	Squad       string   `json:"squad"`
 	Section     string   `json:"section"`
 	Portrait    []byte   `bson:"portrait"`
+	Thumbnail   []byte   `bson:"thumbnail"`
 }
 
 type TicketStatsDoc struct {
@@ -343,7 +344,7 @@ func (s *ticketServer) RhinoChangePassword(ctx context.Context, loginInfo *pb.Pa
 		PolicePortrait: policeDoc.Portrait}, nil
 }
 
-func (s *ticketServer) PullHare(ctx context.Context, loginInfo *pb.HareRequest) (*pb.HareDetails, error) {
+func (s *ticketServer) PullHareOne(ctx context.Context, loginInfo *pb.HareRequest) (*pb.HareProfiles, error) {
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("policedocs")
@@ -351,19 +352,51 @@ func (s *ticketServer) PullHare(ctx context.Context, loginInfo *pb.HareRequest) 
 	err := c.Find(bson.M{"userid": loginInfo.Sid}).One(&policeDoc)
 	if err != nil {
 		log.Println("Failed find police: ", err)
-		return &pb.HareDetails{HareSuccess: false}, err
+		return &pb.HareProfiles{HareSuccess: false}, err
 	}
 	if policeDoc.UserID == "" {
 		log.Println("Police not found:!")
-		return &pb.HareDetails{HareSuccess: false}, err
+		return &pb.HareProfiles{HareSuccess: false}, err
 	}
-	return &pb.HareDetails{HareSuccess: true,
+	return &pb.HareProfiles{HareSuccess: true,
 		PoliceName: policeDoc.Name,
 		PoliceType: policeDoc.Type,
 		PoliceCity: policeDoc.City,
 		PoliceDept: policeDoc.Dept,
 		PoliceSquad: policeDoc.Squad,
-		PoliceSection: policeDoc.Section}, nil
+		PoliceSection: policeDoc.Section,
+		PolicePortrait: policeDoc.Portrait,
+		PoliceThumbnail: policeDoc.Thumbnail}, nil
+}
+
+func (s *ticketServer) PullHareRange(pullProfileRequest *pb.HareRangeRequest, stream pb.Ticket_PullHareRangeServer) error {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("polices").C("policedocs")
+
+	var allPolices []PoliceDoc
+	err := c.Find(bson.M{"userid": pullProfileRequest.Mid}).All(&allPolices)
+	// err = c.Find(bson.M{"userid": pullProfileRequest.Mid}).Sort("-timestamp").All(&allPolices)
+	if err != nil {
+		log.Println("Failed find police profiles: ", err)
+		return nil
+	}
+
+	for _, profile := range allPolices {
+		var p = pb.HareProfiles{HareSuccess: true,
+					PoliceName: profile.Name,
+					PoliceType: profile.Type,
+					PoliceCity: profile.City,
+					PoliceDept: profile.Dept,
+					PoliceSquad: profile.Squad,
+					PoliceSection: profile.Section,
+					PolicePortrait: profile.Portrait,
+					PoliceThumbnail: profile.Thumbnail}
+		if err := stream.Send(&p); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s *ticketServer) HareLogin(ctx context.Context, loginInfo *pb.LoginRequest) (*pb.LoginReply, error) {
@@ -708,20 +741,20 @@ func (s *ticketServer) PullAnchors(ctx context.Context, pullAnchorRequest *pb.Pu
 		log.Println("Police not found:!")
 		return &pb.SlaveAnchors{AnchorCount: -1}, err
 	}
-	return &pb.SlaveAnchors{  Sid: slaveAnchorsDoc.UserID,
+	return &pb.SlaveAnchors{Sid: slaveAnchorsDoc.UserID,
 					AnchorCount: slaveAnchorsDoc.AnchorCount,
-					Anchor0Lng: slaveAnchorsDoc.Anchor0Lng,
-					Anchor0Lat: slaveAnchorsDoc.Anchor0Lat,
-					Anchor1Lng: slaveAnchorsDoc.Anchor1Lng,
-					Anchor1Lat: slaveAnchorsDoc.Anchor1Lat,
-					Anchor2Lng: slaveAnchorsDoc.Anchor2Lng,
-					Anchor2Lat: slaveAnchorsDoc.Anchor2Lat,
-					Anchor3Lng: slaveAnchorsDoc.Anchor3Lng,
-					Anchor3Lat: slaveAnchorsDoc.Anchor3Lat,
-					Anchor4Lng: slaveAnchorsDoc.Anchor4Lng,
-					Anchor4Lat: slaveAnchorsDoc.Anchor4Lat,
-					Anchor5Lng: slaveAnchorsDoc.Anchor5Lng,
-					Anchor5Lat: slaveAnchorsDoc.Anchor5Lat}, nil
+					Anchor0Lng: slaveAnchorsDoc.Anchor5Lng,
+					Anchor0Lat: slaveAnchorsDoc.Anchor5Lat,
+					Anchor1Lng: slaveAnchorsDoc.Anchor4Lng,
+					Anchor1Lat: slaveAnchorsDoc.Anchor4Lat,
+					Anchor2Lng: slaveAnchorsDoc.Anchor3Lng,
+					Anchor2Lat: slaveAnchorsDoc.Anchor3Lat,
+					Anchor3Lng: slaveAnchorsDoc.Anchor2Lng,
+					Anchor3Lat: slaveAnchorsDoc.Anchor2Lat,
+					Anchor4Lng: slaveAnchorsDoc.Anchor1Lng,
+					Anchor4Lat: slaveAnchorsDoc.Anchor1Lat,
+					Anchor5Lng: slaveAnchorsDoc.Anchor0Lng,
+					Anchor5Lat: slaveAnchorsDoc.Anchor0Lat}, nil
 }
 
 func (s *ticketServer) PullTicketStats(ctx context.Context, pullTicketStatsRequest *pb.PullTicketStatsRequest) (*pb.TicketStats, error) {

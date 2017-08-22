@@ -10,7 +10,8 @@ service Ticket {
   rpc RhinoCreateAccount (AccountRequest) returns (AccountReply) {}
   rpc RhinoLogin (LoginRequest) returns (LoginReply) {}
   rpc RhinoChangePassword (PasswordRequest) returns (LoginReply) {}
-  rpc PullHare (HareRequest) returns (HareDetails) {}
+  rpc PullHareOne (HareRequest) returns (HareProfiles) {}
+  rpc PullHareRange (HareRangeRequest) returns (stream HareProfiles) {}
 
   rpc HareCreateAccount (AccountRequest) returns (AccountReply) {}
   rpc HareLogin (LoginRequest) returns (LoginReply) {}
@@ -70,14 +71,21 @@ message HareRequest {
   string sid = 1;
 }
 
-message HareDetails {
+message HareRangeRequest {
+  string mid = 1;
+}
+
+message HareProfiles {
   bool hare_success = 1;
-  string police_name = 2;
-  string police_type = 3;
-  string police_city = 4;
-  string police_dept = 5;
-  string police_squad = 6;
-  string police_section = 7;
+  string user_id = 2;
+  string police_name = 3;
+  string police_type = 4;
+  string police_city = 5;
+  string police_dept = 6;
+  string police_squad = 7;
+  string police_section = 8;
+  bytes police_portrait = 9;
+  bytes police_thumbnail = 10;
 }
 
 message PasswordRequest {
