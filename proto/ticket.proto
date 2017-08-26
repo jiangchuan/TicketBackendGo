@@ -11,7 +11,7 @@ service Ticket {
   rpc RhinoLogin (LoginRequest) returns (LoginReply) {}
   rpc RhinoChangePassword (PasswordRequest) returns (LoginReply) {}
   rpc PullHareOne (HareRequest) returns (HareProfiles) {}
-  rpc PullHareRange (HareRangeRequest) returns (stream HareProfiles) {}
+  rpc PullHareAll (HareAllRequest) returns (stream HareProfiles) {}
 
   rpc HareCreateAccount (AccountRequest) returns (AccountReply) {}
   rpc HareLogin (LoginRequest) returns (LoginReply) {}
@@ -71,7 +71,7 @@ message HareRequest {
   string sid = 1;
 }
 
-message HareRangeRequest {
+message HareAllRequest {
   string mid = 1;
 }
 
@@ -114,6 +114,8 @@ message TicketDetails {
   bytes far_image = 17;
   bytes close_image = 18;
   bytes ticket_image = 19;
+  int32 saved_ticket_count = 20;
+  int32 uploaded_ticket_count = 21;
 }
 
 message RecordReply {

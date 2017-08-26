@@ -161,6 +161,11 @@ func removeSlaveSubmit(name string) {
 
 
 func (s *ticketServer) SlaveLocSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
+	if !lonLatInChina(slaveLoc.Longitude, slaveLoc.Latitude) {
+		log.Println("Lat-Lon out of China!")
+		return &pb.MasterOrder{MasterOrder: "Lat-Lon out of China!"}, nil
+	}
+
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("policelocdocs")
@@ -169,6 +174,7 @@ func (s *ticketServer) SlaveLocSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc
 		Latitude: slaveLoc.Latitude}
   	_, err := c.UpsertId(p.UserID, &p)
 	if err != nil {
+		log.Println("Insert/update loc failed!", err)
 		return &pb.MasterOrder{MasterOrder: "Insert/update loc failed!"}, err
 	}
 	fmt.Println("Sid = " + slaveLoc.Sid)
@@ -185,7 +191,8 @@ func Min(x, y int32) int32 {
 }
 
 func (s *ticketServer) SlaveAnchorSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
-	if !latLonInChina(slaveLoc.Longitude, slaveLoc.Latitude) {
+	if !lonLatInChina(slaveLoc.Longitude, slaveLoc.Latitude) {
+		log.Println("Lat-Lon out of China!")
 		return &pb.MasterOrder{MasterOrder: "Lat-Lon out of China!"}, nil
 	}
 
@@ -212,6 +219,7 @@ func (s *ticketServer) SlaveAnchorSubmit(ctx context.Context, slaveLoc *pb.Slave
 			Anchor5Lat: slaveLoc.Latitude}
 	  	_, err = c.UpsertId(p.UserID, &p)
 		if err != nil {
+			log.Println("First insert/update anchor failed!", err)
 			return &pb.MasterOrder{MasterOrder: "First insert/update anchor failed!"}, err
 		}
 		return &pb.MasterOrder{MasterOrder: "First Submit Anchor Success!"}, nil
@@ -234,6 +242,7 @@ func (s *ticketServer) SlaveAnchorSubmit(ctx context.Context, slaveLoc *pb.Slave
 
   	_, err = c.UpsertId(p.UserID, &p)
 	if err != nil {
+		log.Println("Second - Sixth insert/update anchor failed!", err)
 		return &pb.MasterOrder{MasterOrder: "Second - Sixth insert/update anchor failed!"}, err
 	}
 	return &pb.MasterOrder{MasterOrder: "Second - Sixth Submit Anchor Success!"}, nil
@@ -363,6 +372,7 @@ func (s *ticketServer) PullHareOne(ctx context.Context, loginInfo *pb.HareReques
 		return &pb.HareProfiles{HareSuccess: false}, err
 	}
 	return &pb.HareProfiles{HareSuccess: true,
+		UserId: policeDoc.UserID,
 		PoliceName: policeDoc.Name,
 		PoliceType: policeDoc.Type,
 		PoliceCity: policeDoc.City,
@@ -373,13 +383,13 @@ func (s *ticketServer) PullHareOne(ctx context.Context, loginInfo *pb.HareReques
 		PoliceThumbnail: policeDoc.Thumbnail}, nil
 }
 
-func (s *ticketServer) PullHareRange(pullProfileRequest *pb.HareRangeRequest, stream pb.Ticket_PullHareRangeServer) error {
+func (s *ticketServer) PullHareAll(pullProfileRequest *pb.HareAllRequest, stream pb.Ticket_PullHareAllServer) error {
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("policedocs")
 
 	var allPolices []PoliceDoc
-	err := c.Find(bson.M{"userid": pullProfileRequest.Mid}).All(&allPolices)
+	err := c.Find(nil).All(&allPolices)
 	// err = c.Find(bson.M{"userid": pullProfileRequest.Mid}).Sort("-timestamp").All(&allPolices)
 	if err != nil {
 		log.Println("Failed find police profiles: ", err)
@@ -388,6 +398,7 @@ func (s *ticketServer) PullHareRange(pullProfileRequest *pb.HareRangeRequest, st
 
 	for _, profile := range allPolices {
 		var p = pb.HareProfiles{HareSuccess: true,
+					UserId: profile.UserID,
 					PoliceName: profile.Name,
 					PoliceType: profile.Type,
 					PoliceCity: profile.City,
@@ -489,6 +500,7 @@ func (s *ticketServer) HareChangePassword(ctx context.Context, loginInfo *pb.Pas
 
 
 func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDetails) (*pb.RecordReply, error) {
+	//////////////////// Save Ticket to Folder ////////////////////
 	dayName := fmt.Sprintf("%d-%d-%d", ticketInfo.Year, ticketInfo.Month, ticketInfo.Day)
 	timeNumName := fmt.Sprintf("%d-%d_%d", ticketInfo.Hour, ticketInfo.Minute, ticketInfo.TicketId)
 	directoryPath := fmt.Sprintf("./tickets/%s/%s_%s", dayName, dayName, timeNumName)
@@ -515,10 +527,72 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 	createFile(imgPath)
 	writeImage(imgPath, ticketInfo.TicketImage)
 
+
+
 	session := dbSession.Copy()
 	defer session.Close()
-	c := session.DB("tickets").C("ticketdocs")
-	err := c.Insert(&TicketDoc{TicketID: ticketInfo.TicketId,
+
+	//////////////////// Record Lat-Lon Anchors ////////////////////
+	if lonLatInChina(ticketInfo.Longitude, ticketInfo.Latitude) {
+		c := session.DB("polices").C("policeanchordocs")
+		var policeAnchorDoc PoliceAnchorDoc
+		err := c.Find(bson.M{"userid": ticketInfo.UserId}).One(&policeAnchorDoc)
+		if err != nil || policeAnchorDoc.UserID == "" {
+			var p = PoliceAnchorDoc{UserID: ticketInfo.UserId,
+				AnchorCount: 1,
+				Anchor0Lng: 0.0,
+				Anchor0Lat: 0.0,
+				Anchor1Lng: 0.0,
+				Anchor1Lat: 0.0,
+				Anchor2Lng: 0.0,
+				Anchor2Lat: 0.0,
+				Anchor3Lng: 0.0,
+				Anchor3Lat: 0.0,
+				Anchor4Lng: 0.0,
+				Anchor4Lat: 0.0,
+				Anchor5Lng: ticketInfo.Longitude,
+				Anchor5Lat: ticketInfo.Latitude}
+		  	_, err = c.UpsertId(p.UserID, &p)
+			if err != nil {
+				log.Println("First insert/update anchor failed!", err)
+			}
+		} else {
+			var p = PoliceAnchorDoc{UserID: ticketInfo.UserId,
+				AnchorCount: Min(policeAnchorDoc.AnchorCount + 1, 6),
+				Anchor0Lng: policeAnchorDoc.Anchor1Lng,
+				Anchor0Lat: policeAnchorDoc.Anchor1Lat,
+				Anchor1Lng: policeAnchorDoc.Anchor2Lng,
+				Anchor1Lat: policeAnchorDoc.Anchor2Lat,
+				Anchor2Lng: policeAnchorDoc.Anchor3Lng,
+				Anchor2Lat: policeAnchorDoc.Anchor3Lat,
+				Anchor3Lng: policeAnchorDoc.Anchor4Lng,
+				Anchor3Lat: policeAnchorDoc.Anchor4Lat,
+				Anchor4Lng: policeAnchorDoc.Anchor5Lng,
+				Anchor4Lat: policeAnchorDoc.Anchor5Lat,
+				Anchor5Lng: ticketInfo.Longitude,
+				Anchor5Lat: ticketInfo.Latitude}
+		  	_, err = c.UpsertId(p.UserID, &p)
+			if err != nil {
+				log.Println("Second - Sixth insert/update anchor failed!", err)
+			}
+		}
+	} else {
+		log.Println("Lat-Lon out of China!")
+	}
+
+	//////////////////// Record Ticket Statistics ////////////////////
+	c := session.DB("polices").C("ticketstatsdocs")
+	var p = TicketStatsDoc{UserID: ticketInfo.UserId,
+		SavedTicketCount: ticketInfo.SavedTicketCount,
+		UploadedTicketCount: ticketInfo.UploadedTicketCount}
+  	_, err := c.UpsertId(p.UserID, &p)
+	if err != nil {
+		log.Println("Failed to insert/update ticket statistics!", err)
+	}
+
+	//////////////////// Record Ticket to DB ////////////////////
+	c = session.DB("tickets").C("ticketdocs")
+	err = c.Insert(&TicketDoc{TicketID: ticketInfo.TicketId,
 		UserID: ticketInfo.UserId,
 		LicenseNum: ticketInfo.LicenseNum,
 		LicenseColor: ticketInfo.LicenseColor,
@@ -731,7 +805,7 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 	return nil
 }
 
-func latLonInChina(longitude, latitude float64) bool {
+func lonLatInChina(longitude, latitude float64) bool {
     if (longitude > 73 && longitude < 135 && latitude > 20 && latitude < 54) {
         return true;
     }
