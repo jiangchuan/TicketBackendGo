@@ -5,9 +5,9 @@ import (
  "fmt"
  "log"
  "os"
- "io"
  "net"
  "sync"
+ "time"
 
  // "io/ioutil"
 
@@ -25,7 +25,15 @@ import (
 )
 
 const (
-	// port = ":50051"
+   // CHINA_WEST float64 = 73.0
+   // CHINA_EAST float64 = 135.0
+   // CHINA_SOUTH float64 = 20.0
+   // CHINA_NORTH float64 = 54.0
+
+    CHINA_WEST float64 = -125.0
+    CHINA_EAST float64 = -64.0
+    CHINA_SOUTH float64 = 24.0
+    CHINA_NORTH float64 = 49.5
 )
 
 
@@ -72,22 +80,30 @@ type PoliceLocDoc struct {
 	Latitude     float64   `json:"latitude"`
 }
 
+// type PoliceAnchorDoc struct {
+// 	UserID         string    `json:"userid"`
+// 	AnchorCount    int32     `json:"anchorcount"`
+// 	Anchor0Lng     float64   `json:"anchor0lng"`
+// 	Anchor0Lat     float64   `json:"anchor0lat"`
+// 	Anchor1Lng     float64   `json:"anchor1lng"`
+// 	Anchor1Lat     float64   `json:"anchor1lat"`
+// 	Anchor2Lng     float64   `json:"anchor2lng"`
+// 	Anchor2Lat     float64   `json:"anchor2lat"`
+// 	Anchor3Lng     float64   `json:"anchor3lng"`
+// 	Anchor3Lat     float64   `json:"anchor3lat"`
+// 	Anchor4Lng     float64   `json:"anchor4lng"`
+// 	Anchor4Lat     float64   `json:"anchor4lat"`
+// 	Anchor5Lng     float64   `json:"anchor5lng"`
+// 	Anchor5Lat     float64   `json:"anchor5lat"`
+// }
+
 type PoliceAnchorDoc struct {
-	UserID         string    `json:"userid"`
-	AnchorCount    int32     `json:"anchorcount"`
-	Anchor0Lng     float64   `json:"anchor0lng"`
-	Anchor0Lat     float64   `json:"anchor0lat"`
-	Anchor1Lng     float64   `json:"anchor1lng"`
-	Anchor1Lat     float64   `json:"anchor1lat"`
-	Anchor2Lng     float64   `json:"anchor2lng"`
-	Anchor2Lat     float64   `json:"anchor2lat"`
-	Anchor3Lng     float64   `json:"anchor3lng"`
-	Anchor3Lat     float64   `json:"anchor3lat"`
-	Anchor4Lng     float64   `json:"anchor4lng"`
-	Anchor4Lat     float64   `json:"anchor4lat"`
-	Anchor5Lng     float64   `json:"anchor5lng"`
-	Anchor5Lat     float64   `json:"anchor5lat"`
+	UserID       string      `json:"userid"`
+	Longitude    float64     `json:"longitude"`
+	Latitude     float64     `json:"latitude"`
+	Timestamp    time.Time   `json:"timestamp"`
 }
+
 
 type TicketDoc struct {
 	TicketID        int64     `json:"ticketid"`
@@ -122,44 +138,6 @@ type PerformanceDoc struct {
 	TicketCount    int32    `json:"ticketcount"`
 }
 
-var masterReceiveMap = make(map[string]chan pb.SlaveLoc, 100)
-var slaveSubmitMap = make(map[string]chan pb.MasterOrder, 100)
-
-func hasMasterReceive(name string) bool {
-	usersLock.Lock()
-	defer usersLock.Unlock()
-	_, exists := masterReceiveMap[name]
-	return exists
-}
-func addMasterReceive(name string, msgQ chan pb.SlaveLoc) {
-	usersLock.Lock()
-	defer usersLock.Unlock()
-	masterReceiveMap[name] = msgQ
-}
-func removeMasterReceive(name string) {
-	usersLock.Lock()
-	defer usersLock.Unlock()
-	delete(masterReceiveMap, name)
-}
-
-func hasSlaveSubmit(name string) bool {
-	usersLock.Lock()
-	defer usersLock.Unlock()
-	_, exists := slaveSubmitMap[name]
-	return exists
-}
-func addSlaveSubmit(name string, msgQ chan pb.MasterOrder) {
-	usersLock.Lock()
-	defer usersLock.Unlock()
-	slaveSubmitMap[name] = msgQ
-}
-func removeSlaveSubmit(name string) {
-	usersLock.Lock()
-	defer usersLock.Unlock()
-	delete(slaveSubmitMap, name)
-}
-
-
 func (s *ticketServer) SlaveLocSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
 	if !lonLatInChina(slaveLoc.Longitude, slaveLoc.Latitude) {
 		log.Println("Lat-Lon out of China!")
@@ -189,89 +167,6 @@ func Min(x, y int32) int32 {
     }
     return y
 }
-
-func (s *ticketServer) SlaveAnchorSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc) (*pb.MasterOrder, error) {
-	if !lonLatInChina(slaveLoc.Longitude, slaveLoc.Latitude) {
-		log.Println("Lat-Lon out of China!")
-		return &pb.MasterOrder{MasterOrder: "Lat-Lon out of China!"}, nil
-	}
-
-	session := dbSession.Copy()
-	defer session.Close()
-	c := session.DB("polices").C("policeanchordocs")
-
-	var policeAnchorDoc PoliceAnchorDoc
-	err := c.Find(bson.M{"userid": slaveLoc.Sid}).One(&policeAnchorDoc)
-	if err != nil || policeAnchorDoc.UserID == "" {
-		var p = PoliceAnchorDoc{UserID: slaveLoc.Sid,
-			AnchorCount: 1,
-			Anchor0Lng: 0.0,
-			Anchor0Lat: 0.0,
-			Anchor1Lng: 0.0,
-			Anchor1Lat: 0.0,
-			Anchor2Lng: 0.0,
-			Anchor2Lat: 0.0,
-			Anchor3Lng: 0.0,
-			Anchor3Lat: 0.0,
-			Anchor4Lng: 0.0,
-			Anchor4Lat: 0.0,
-			Anchor5Lng: slaveLoc.Longitude,
-			Anchor5Lat: slaveLoc.Latitude}
-	  	_, err = c.UpsertId(p.UserID, &p)
-		if err != nil {
-			log.Println("First insert/update anchor failed!", err)
-			return &pb.MasterOrder{MasterOrder: "First insert/update anchor failed!"}, err
-		}
-		return &pb.MasterOrder{MasterOrder: "First Submit Anchor Success!"}, nil
-	}
-
-	var p = PoliceAnchorDoc{UserID: slaveLoc.Sid,
-		AnchorCount: Min(policeAnchorDoc.AnchorCount + 1, 6),
-		Anchor0Lng: policeAnchorDoc.Anchor1Lng,
-		Anchor0Lat: policeAnchorDoc.Anchor1Lat,
-		Anchor1Lng: policeAnchorDoc.Anchor2Lng,
-		Anchor1Lat: policeAnchorDoc.Anchor2Lat,
-		Anchor2Lng: policeAnchorDoc.Anchor3Lng,
-		Anchor2Lat: policeAnchorDoc.Anchor3Lat,
-		Anchor3Lng: policeAnchorDoc.Anchor4Lng,
-		Anchor3Lat: policeAnchorDoc.Anchor4Lat,
-		Anchor4Lng: policeAnchorDoc.Anchor5Lng,
-		Anchor4Lat: policeAnchorDoc.Anchor5Lat,
-		Anchor5Lng: slaveLoc.Longitude,
-		Anchor5Lat: slaveLoc.Latitude}
-
-  	_, err = c.UpsertId(p.UserID, &p)
-	if err != nil {
-		log.Println("Second - Sixth insert/update anchor failed!", err)
-		return &pb.MasterOrder{MasterOrder: "Second - Sixth insert/update anchor failed!"}, err
-	}
-	return &pb.MasterOrder{MasterOrder: "Second - Sixth Submit Anchor Success!"}, nil
-}
-
-
-func (s *ticketServer) MasterReceive(stream pb.Ticket_MasterReceiveServer) error {
-	in, err := stream.Recv()
-	if err == io.EOF {
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	mReceiveMailbox := make(chan pb.SlaveLoc, 100)
-	if in.Mid == "" {
-		return fmt.Errorf("No MasterReceive ID!")
-	} else {
-		if !hasMasterReceive(in.Mid) {
-			addMasterReceive(in.Mid, mReceiveMailbox)		
-		}
-	}
-	slaveLoc := <-mReceiveMailbox
-	if err := stream.Send(&slaveLoc); err != nil {
-		return err
-	}
-	return nil
-}
-
 
 func (s *ticketServer) RhinoLogin(ctx context.Context, loginInfo *pb.LoginRequest) (*pb.LoginReply, error) {
 	session := dbSession.Copy()
@@ -535,47 +430,20 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 	//////////////////// Record Lat-Lon Anchors ////////////////////
 	if lonLatInChina(ticketInfo.Longitude, ticketInfo.Latitude) {
 		c := session.DB("polices").C("policeanchordocs")
-		var policeAnchorDoc PoliceAnchorDoc
-		err := c.Find(bson.M{"userid": ticketInfo.UserId}).One(&policeAnchorDoc)
-		if err != nil || policeAnchorDoc.UserID == "" {
-			var p = PoliceAnchorDoc{UserID: ticketInfo.UserId,
-				AnchorCount: 1,
-				Anchor0Lng: 0.0,
-				Anchor0Lat: 0.0,
-				Anchor1Lng: 0.0,
-				Anchor1Lat: 0.0,
-				Anchor2Lng: 0.0,
-				Anchor2Lat: 0.0,
-				Anchor3Lng: 0.0,
-				Anchor3Lat: 0.0,
-				Anchor4Lng: 0.0,
-				Anchor4Lat: 0.0,
-				Anchor5Lng: ticketInfo.Longitude,
-				Anchor5Lat: ticketInfo.Latitude}
-		  	_, err = c.UpsertId(p.UserID, &p)
-			if err != nil {
-				log.Println("First insert/update anchor failed!", err)
-			}
-		} else {
-			var p = PoliceAnchorDoc{UserID: ticketInfo.UserId,
-				AnchorCount: Min(policeAnchorDoc.AnchorCount + 1, 6),
-				Anchor0Lng: policeAnchorDoc.Anchor1Lng,
-				Anchor0Lat: policeAnchorDoc.Anchor1Lat,
-				Anchor1Lng: policeAnchorDoc.Anchor2Lng,
-				Anchor1Lat: policeAnchorDoc.Anchor2Lat,
-				Anchor2Lng: policeAnchorDoc.Anchor3Lng,
-				Anchor2Lat: policeAnchorDoc.Anchor3Lat,
-				Anchor3Lng: policeAnchorDoc.Anchor4Lng,
-				Anchor3Lat: policeAnchorDoc.Anchor4Lat,
-				Anchor4Lng: policeAnchorDoc.Anchor5Lng,
-				Anchor4Lat: policeAnchorDoc.Anchor5Lat,
-				Anchor5Lng: ticketInfo.Longitude,
-				Anchor5Lat: ticketInfo.Latitude}
-		  	_, err = c.UpsertId(p.UserID, &p)
-			if err != nil {
-				log.Println("Second - Sixth insert/update anchor failed!", err)
-			}
+		var p = PoliceAnchorDoc{UserID: ticketInfo.UserId,
+			Longitude: ticketInfo.Longitude,
+			Latitude: ticketInfo.Latitude,
+			Timestamp: time.Now()}
+	  	// _, err := c.UpsertId(p.TicketID, &p)
+	  	err := c.Insert(&p)
+
+		if err != nil {
+			log.Println("Insert/update anchor failed!", err)
 		}
+		log.Println("Submit Anchor Success!")
+		fmt.Println("Sid = " + ticketInfo.UserId)
+		fmt.Println("Anchor Longitude = %d", ticketInfo.Longitude)
+		fmt.Println("Anchor Latitude = %d", ticketInfo.Latitude)
 	} else {
 		log.Println("Lat-Lon out of China!")
 	}
@@ -692,7 +560,7 @@ func (s *ticketServer) SubmitTicketStats(ctx context.Context, ticketStats *pb.Ti
 	return &pb.StatsReply{StatsSuccess: true}, nil
 }
 
-func (s *ticketServer) PullLocation(rect *pb.PullLocRequest, stream pb.Ticket_PullLocationServer) error {
+func (s *ticketServer) PullLocation(pullLocRequest *pb.PullLocRequest, stream pb.Ticket_PullLocationServer) error {
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("policelocdocs")
@@ -806,42 +674,33 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 }
 
 func lonLatInChina(longitude, latitude float64) bool {
-    if (longitude > 73 && longitude < 135 && latitude > 20 && latitude < 54) {
+    if (longitude > CHINA_WEST && longitude < CHINA_EAST && latitude > CHINA_SOUTH && latitude < CHINA_NORTH) {
         return true;
     }
     return false;
 }
 
-
-func (s *ticketServer) PullAnchors(ctx context.Context, pullAnchorRequest *pb.PullAnchorRequest) (*pb.SlaveAnchors, error) {
-	fmt.Println("Entered pull anchors")
+func (s *ticketServer) PullAnchors(pullAnchorRequest *pb.PullAnchorRequest, stream pb.Ticket_PullAnchorsServer) error {
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("policeanchordocs")
-	var slaveAnchorsDoc PoliceAnchorDoc
-	err := c.Find(bson.M{"userid": pullAnchorRequest.Sid}).One(&slaveAnchorsDoc)
-	if err != nil {
+    var slaveLocs []PoliceAnchorDoc
+    err := c.Find(bson.M{"userid": pullAnchorRequest.Sid}).Sort("timestamp").All(&slaveLocs)
+
+    if err != nil {
 		log.Println("Failed find police anchors: ", err)
-		return &pb.SlaveAnchors{AnchorCount: -1}, err
+		return err
+    }
+
+	for _, slaveLoc := range slaveLocs {
+		fmt.Println("anchor entered")
+		if err = stream.Send(&pb.SlaveLoc{Sid: slaveLoc.UserID,
+				Longitude: slaveLoc.Longitude,
+				Latitude: slaveLoc.Latitude}); err != nil {
+			return err
+		}
 	}
-	if slaveAnchorsDoc.UserID == "" {
-		log.Println("Police not found:!")
-		return &pb.SlaveAnchors{AnchorCount: -1}, err
-	}
-	return &pb.SlaveAnchors{Sid: slaveAnchorsDoc.UserID,
-					AnchorCount: slaveAnchorsDoc.AnchorCount,
-					Anchor0Lng: slaveAnchorsDoc.Anchor5Lng,
-					Anchor0Lat: slaveAnchorsDoc.Anchor5Lat,
-					Anchor1Lng: slaveAnchorsDoc.Anchor4Lng,
-					Anchor1Lat: slaveAnchorsDoc.Anchor4Lat,
-					Anchor2Lng: slaveAnchorsDoc.Anchor3Lng,
-					Anchor2Lat: slaveAnchorsDoc.Anchor3Lat,
-					Anchor3Lng: slaveAnchorsDoc.Anchor2Lng,
-					Anchor3Lat: slaveAnchorsDoc.Anchor2Lat,
-					Anchor4Lng: slaveAnchorsDoc.Anchor1Lng,
-					Anchor4Lat: slaveAnchorsDoc.Anchor1Lat,
-					Anchor5Lng: slaveAnchorsDoc.Anchor0Lng,
-					Anchor5Lat: slaveAnchorsDoc.Anchor0Lat}, nil
+	return nil
 }
 
 func (s *ticketServer) PullTicketStats(ctx context.Context, pullTicketStatsRequest *pb.PullTicketStatsRequest) (*pb.TicketStats, error) {
@@ -1058,8 +917,8 @@ func ensureIndex(s *mgo.Session) {
 	c = session.DB("polices").C("policeanchordocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
-		Unique:     true,
-		DropDups:   true,
+		Unique:     false,
+		DropDups:   false,
 		Background: true,
 		Sparse:     true,
 	}

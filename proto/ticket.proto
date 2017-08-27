@@ -21,12 +21,10 @@ service Ticket {
   rpc SubmitTicketStats (TicketStats) returns (StatsReply) {}
 
   rpc SlaveLocSubmit(SlaveLoc) returns (MasterOrder) {}
-  rpc SlaveAnchorSubmit(SlaveLoc) returns (MasterOrder) {}
-  rpc MasterReceive(stream MasterOrder) returns (stream SlaveLoc) {}
 
   rpc PullLocation (PullLocRequest) returns (stream SlaveNameLoc) {}
+  rpc PullAnchors (PullAnchorRequest) returns (stream SlaveLoc) {}
   rpc PullPerformance (PullPerformanceRequest) returns (stream SlavePerformance) {}
-  rpc PullAnchors (PullAnchorRequest) returns (SlaveAnchors) {}
   rpc PullTicketStats (PullTicketStatsRequest) returns (TicketStats) {}
   rpc PullTicket (PullTicketRequest) returns (stream TicketDetails) {}
 
