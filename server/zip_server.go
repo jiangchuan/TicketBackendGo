@@ -2,12 +2,14 @@ package main
 
 import (
  "fmt"
+ "log"
  "os"
  "io"
  "archive/zip"
  "path/filepath"
  "strings"
  "time"
+ "gopkg.in/mgo.v2"
 )
 
 const (
@@ -129,10 +131,49 @@ func updateTicker() *time.Ticker {
 	if !nextTick.After(time.Now()) {
 		nextTick = nextTick.Add(INTERVAL_PERIOD)
 	}
-	fmt.Println(nextTick, "- next zip")
+	fmt.Println(nextTick, "- next run")
 	diff := nextTick.Sub(time.Now())
 	return time.NewTicker(diff)
 }
+
+////////// MongoDB //////////
+func ensureIndex(s *mgo.Session) {
+	session := s.Copy()
+	defer session.Close()
+	c := session.DB("polices").C("policeanchordocs")
+	index := mgo.Index{
+		Key:        []string{"userid"},
+		Unique:     false,
+		DropDups:   false,
+		Background: true,
+		Sparse:     true,
+	}
+	err := c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+}
+
+func removeAnchors() {
+
+	/////////////////////////////////////////////////
+	session, err := mgo.Dial("localhost")
+	if err != nil {
+		panic(err)
+	}
+	defer session.Close()
+
+	session.SetMode(mgo.Monotonic, true)
+	ensureIndex(session)
+
+	_, err = session.DB("polices").C("policeanchordocs").RemoveAll(nil)
+	if err != nil {
+		log.Println("Failed to remove anchors: ", err)
+	}
+
+}
+
 
 func main() {
 	// zipDayTickets("2017-8-6")
@@ -140,6 +181,11 @@ func main() {
     for {
 		<-ticker.C
 		folderName := fmt.Sprintf("%d-%d-%d", time.Now().Year(), int(time.Now().Month()), time.Now().Day())
+
+		removeAnchors()
+		fmt.Println(time.Now(), "- just removed anchors")
+
+
 		zipDayTickets(folderName)
 		fmt.Println(time.Now(), fmt.Sprintf("- just zipped %s", folderName))
 		ticker = updateTicker()

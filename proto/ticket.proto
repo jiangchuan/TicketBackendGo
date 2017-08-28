@@ -31,6 +31,8 @@ service Ticket {
   rpc SetTicketRange (TicketRange) returns (TicketRangeReply) {}
   rpc PullTicketRange (TicketRangeSid) returns (TicketRange) {}
 
+  rpc HareLogout(LogoutRequest) returns (LogoutReply) {}
+
 }
 
 message AccountRequest {
@@ -209,3 +211,10 @@ message TicketRangeSid {
   string sid = 1;
 }
 
+message LogoutRequest {
+  string user_id = 1;
+}
+
+message LogoutReply {
+  bool logout_success = 1;
+}

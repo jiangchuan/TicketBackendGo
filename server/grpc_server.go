@@ -337,6 +337,18 @@ func (s *ticketServer) HareLogin(ctx context.Context, loginInfo *pb.LoginRequest
 		PolicePortrait: policeDoc.Portrait}, nil
 }
 
+func (s *ticketServer) HareLogout(ctx context.Context, logoutInfo *pb.LogoutRequest) (*pb.LogoutReply, error) {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("polices").C("policelocdocs")
+	_, err := c.RemoveAll(bson.M{"userid": logoutInfo.UserId})
+	if err != nil {
+		log.Println(fmt.Sprintf("Failed to logout %s", logoutInfo.UserId), err)
+		return &pb.LogoutReply{LogoutSuccess: false}, err
+	}
+	return &pb.LogoutReply{LogoutSuccess: true}, nil
+}
+
 func (s *ticketServer) HareCreateAccount(ctx context.Context, policeInfo *pb.AccountRequest) (*pb.AccountReply, error) {
 	session := dbSession.Copy()
 	defer session.Close()
