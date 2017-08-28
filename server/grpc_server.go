@@ -734,16 +734,18 @@ func (s *ticketServer) PullTicketStats(ctx context.Context, pullTicketStatsReque
 					UploadedTicketCount: ticketStatsDoc.UploadedTicketCount}, nil
 }
 
-func (s *ticketServer) PullTicket(pullTicketRequest *pb.PullTicketRequest, stream pb.Ticket_PullTicketServer) error {
+func (s *ticketServer) PullTickets(pullTicketsRequest *pb.PullTicketsRequest, stream pb.Ticket_PullTicketsServer) error {
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("tickets").C("ticketdocs")
 
 	var allTickets []TicketDoc
-	err := c.Find(bson.M{"userid": pullTicketRequest.Sid}).All(&allTickets)
-	// err = c.Find(bson.M{"userid": pullTicketRequest.Sid}).Sort("-timestamp").All(&allTickets)
+	err := c.Find(bson.M{"userid": pullTicketsRequest.Sid,
+						"year": pullTicketsRequest.Year,
+						"week": pullTicketsRequest.Week}).All(&allTickets)
+	// err = c.Find(bson.M{"userid": pullTicketsRequest.Sid}).Sort("-timestamp").All(&allTickets)
 	if err != nil {
-		log.Println("Failed find police tickets: ", err)
+		log.Println(fmt.Sprintf("Failed find police tickets for week %d", pullTicketsRequest.Week), err)
 		return nil
 	}
 

@@ -26,7 +26,7 @@ service Ticket {
   rpc PullAnchors (PullAnchorRequest) returns (stream SlaveLoc) {}
   rpc PullPerformance (PullPerformanceRequest) returns (stream SlavePerformance) {}
   rpc PullTicketStats (PullTicketStatsRequest) returns (TicketStats) {}
-  rpc PullTicket (PullTicketRequest) returns (stream TicketDetails) {}
+  rpc PullTickets (PullTicketsRequest) returns (stream TicketDetails) {}
 
   rpc SetTicketRange (TicketRange) returns (TicketRangeReply) {}
   rpc PullTicketRange (TicketRangeSid) returns (TicketRange) {}
@@ -148,9 +148,12 @@ message PullTicketStatsRequest {
   string sid = 1;
 }
 
-message PullTicketRequest {
+message PullTicketsRequest {
   string sid = 1;
+  int32 year = 2;
+  int32 week = 3;
 }
+
 
 message SlaveLoc {
   string sid = 1;
