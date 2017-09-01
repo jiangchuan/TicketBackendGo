@@ -118,6 +118,7 @@ type TicketDoc struct {
 	Day             int32     `json:"day"`
 	Hour            int32     `json:"hour"`
 	Minute          int32     `json:"minute"`
+	TicketTime      int64     `json:"tickettime"`
 	Address         string    `json:"address"`
 	Longitude       float64   `json:"longitude"`
 	Latitude        float64   `json:"latitude"`
@@ -484,6 +485,7 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 		Day: ticketInfo.Day,
 		Hour: ticketInfo.Hour,
 		Minute: ticketInfo.Minute,
+		TicketTime: ticketInfo.TicketTime,
 		Address: ticketInfo.Address,
 		Longitude: ticketInfo.Longitude,
 		Latitude: ticketInfo.Latitude,
@@ -742,7 +744,8 @@ func (s *ticketServer) PullTickets(pullTicketsRequest *pb.PullTicketsRequest, st
 	var allTickets []TicketDoc
 	err := c.Find(bson.M{"userid": pullTicketsRequest.Sid,
 						"year": pullTicketsRequest.Year,
-						"week": pullTicketsRequest.Week}).All(&allTickets)
+						"week": pullTicketsRequest.Week,
+						"tickettime": bson.M{"$gt": pullTicketsRequest.LastTime},}).All(&allTickets)
 	// err = c.Find(bson.M{"userid": pullTicketsRequest.Sid}).Sort("-timestamp").All(&allTickets)
 	if err != nil {
 		log.Println(fmt.Sprintf("Failed find police tickets for week %d", pullTicketsRequest.Week), err)
@@ -762,6 +765,7 @@ func (s *ticketServer) PullTickets(pullTicketsRequest *pb.PullTicketsRequest, st
 					Day: details.Day,
 					Hour: details.Hour,
 					Minute: details.Minute,
+					TicketTime: details.TicketTime,
 					Address: details.Address,
 					Longitude: details.Longitude,
 					Latitude: details.Latitude,

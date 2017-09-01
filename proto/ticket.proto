@@ -107,15 +107,16 @@ message TicketDetails {
   int32 day = 10;
   int32 hour = 11;
   int32 minute = 12;
-  string address = 13;
-  double longitude = 14;
-  double latitude = 15;
-  bytes map_image = 16;
-  bytes far_image = 17;
-  bytes close_image = 18;
-  bytes ticket_image = 19;
-  int32 saved_ticket_count = 20;
-  int32 uploaded_ticket_count = 21;
+  int64 ticket_time = 13;
+  string address = 14;
+  double longitude = 15;
+  double latitude = 16;
+  bytes map_image = 17;
+  bytes far_image = 18;
+  bytes close_image = 19;
+  bytes ticket_image = 20;
+  int32 saved_ticket_count = 21;
+  int32 uploaded_ticket_count = 22;
 }
 
 message RecordReply {
@@ -152,8 +153,8 @@ message PullTicketsRequest {
   string sid = 1;
   int32 year = 2;
   int32 week = 3;
+  int64 last_time = 4;
 }
-
 
 message SlaveLoc {
   string sid = 1;
