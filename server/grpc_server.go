@@ -75,9 +75,10 @@ type TicketStatsDoc struct {
 }
 
 type PoliceLocDoc struct {
-	UserID       string    `json:"userid"`
-	Longitude    float64   `json:"longitude"`
-	Latitude     float64   `json:"latitude"`
+	UserID       string      `json:"userid"`
+	Longitude    float64     `json:"longitude"`
+	Latitude     float64     `json:"latitude"`
+	Timestamp    time.Time   `json:"timestamp"`
 }
 
 // type PoliceAnchorDoc struct {
@@ -150,7 +151,8 @@ func (s *ticketServer) SlaveLocSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc
 	c := session.DB("polices").C("policelocdocs")
 	var p = PoliceLocDoc{UserID: slaveLoc.Sid,
 		Longitude: slaveLoc.Longitude,
-		Latitude: slaveLoc.Latitude}
+		Latitude: slaveLoc.Latitude,
+		Timestamp: time.Now()}
   	_, err := c.UpsertId(p.UserID, &p)
 	if err != nil {
 		log.Println("Insert/update loc failed!", err)
@@ -580,7 +582,7 @@ func (s *ticketServer) PullLocation(pullLocRequest *pb.PullLocRequest, stream pb
 	c := session.DB("polices").C("policelocdocs")
 
     var slaveLocs []PoliceLocDoc
-    err := c.Find(bson.M{}).All(&slaveLocs)
+    err := c.Find(bson.M{"timestamp": bson.M{"$gt": time.Now().Add(-time.Minute)},}).All(&slaveLocs)
     if err != nil {
 		log.Println("Failed find police locations: ", err)
 		return err
