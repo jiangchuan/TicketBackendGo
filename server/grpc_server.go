@@ -127,6 +127,7 @@ type TicketDoc struct {
 	FarImage        []byte    `bson:"farimage"`
 	CloseImage      []byte    `bson:"closeimage"`
 	TicketImage     []byte    `bson:"ticketimage"`
+	IsUploaded      bool      `json:"isuploaded"`
 }
 
 type TicketRangeDoc struct {
@@ -411,38 +412,39 @@ func (s *ticketServer) HareChangePassword(ctx context.Context, loginInfo *pb.Pas
 
 func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDetails) (*pb.RecordReply, error) {
 	//////////////////// Save Ticket to Folder ////////////////////
-	dayName := fmt.Sprintf("%d-%d-%d", ticketInfo.Year, ticketInfo.Month, ticketInfo.Day)
-	timeNumName := fmt.Sprintf("%d-%d_%d", ticketInfo.Hour, ticketInfo.Minute, ticketInfo.TicketId)
-	directoryPath := fmt.Sprintf("./tickets/%s/%s_%s", dayName, dayName, timeNumName)
-	createDirectory(directoryPath)
+	if ticketInfo.IsUploaded {
+		dayName := fmt.Sprintf("%d-%d-%d", ticketInfo.Year, ticketInfo.Month, ticketInfo.Day)
+		timeNumName := fmt.Sprintf("%d-%d_%d", ticketInfo.Hour, ticketInfo.Minute, ticketInfo.TicketId)
+		directoryPath := fmt.Sprintf("./tickets/%s/%s_%s", dayName, dayName, timeNumName)
+		createDirectory(directoryPath)
 
-	// Write ticket.txt
-	ticketPath := fmt.Sprintf("%s/ticket_%d.txt", directoryPath, ticketInfo.TicketId)
-	ticketContent := fmt.Sprintf("罚单编号: %d\n车辆牌号: %s\n车身颜色: %s\n车辆类型: %s\n号牌颜色: %s\n停车时间: %d年%d月%d日%d时%d分\n停车地点: %s", 
-			ticketInfo.TicketId, ticketInfo.LicenseNum, ticketInfo.VehicleColor, ticketInfo.VehicleType, ticketInfo.LicenseColor,
-			ticketInfo.Year, ticketInfo.Month, ticketInfo.Day, ticketInfo.Hour, ticketInfo.Minute, ticketInfo.Address)
-	createFile(ticketPath)
-	writeFile(ticketPath, ticketContent)
+		// Write ticket.txt
+		ticketPath := fmt.Sprintf("%s/ticket_%d.txt", directoryPath, ticketInfo.TicketId)
+		ticketContent := fmt.Sprintf("罚单编号: %d\n车辆牌号: %s\n车身颜色: %s\n车辆类型: %s\n号牌颜色: %s\n停车时间: %d年%d月%d日%d时%d分\n停车地点: %s", 
+				ticketInfo.TicketId, ticketInfo.LicenseNum, ticketInfo.VehicleColor, ticketInfo.VehicleType, ticketInfo.LicenseColor,
+				ticketInfo.Year, ticketInfo.Month, ticketInfo.Day, ticketInfo.Hour, ticketInfo.Minute, ticketInfo.Address)
+		createFile(ticketPath)
+		writeFile(ticketPath, ticketContent)
 
-	// Write img.jpg
-	imgPath := fmt.Sprintf("%s/image1_%d.jpg", directoryPath, ticketInfo.TicketId)
-	createFile(imgPath)
-	writeImage(imgPath, ticketInfo.FarImage)
+		// Write img.jpg
+		imgPath := fmt.Sprintf("%s/image1_%d.jpg", directoryPath, ticketInfo.TicketId)
+		createFile(imgPath)
+		writeImage(imgPath, ticketInfo.FarImage)
 
-	imgPath = fmt.Sprintf("%s/image2_%d.jpg", directoryPath, ticketInfo.TicketId)
-	createFile(imgPath)
-	writeImage(imgPath, ticketInfo.CloseImage)
+		imgPath = fmt.Sprintf("%s/image2_%d.jpg", directoryPath, ticketInfo.TicketId)
+		createFile(imgPath)
+		writeImage(imgPath, ticketInfo.CloseImage)
 
-	imgPath = fmt.Sprintf("%s/image3_%d.jpg", directoryPath, ticketInfo.TicketId)
-	createFile(imgPath)
-	writeImage(imgPath, ticketInfo.TicketImage)
+		imgPath = fmt.Sprintf("%s/image3_%d.jpg", directoryPath, ticketInfo.TicketId)
+		createFile(imgPath)
+		writeImage(imgPath, ticketInfo.TicketImage)
+	}
 
 
-
+	//////////////////// Record Lat-Lon Anchors ////////////////////
 	session := dbSession.Copy()
 	defer session.Close()
 
-	//////////////////// Record Lat-Lon Anchors ////////////////////
 	if lonLatInChina(ticketInfo.Longitude, ticketInfo.Latitude) {
 		c := session.DB("polices").C("policeanchordocs")
 		var p = PoliceAnchorDoc{UserID: ticketInfo.UserId,
@@ -463,19 +465,19 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 		log.Println("Lat-Lon out of China!")
 	}
 
-	//////////////////// Record Ticket Statistics ////////////////////
-	c := session.DB("polices").C("ticketstatsdocs")
-	var p = TicketStatsDoc{UserID: ticketInfo.UserId,
-		SavedTicketCount: ticketInfo.SavedTicketCount,
-		UploadedTicketCount: ticketInfo.UploadedTicketCount}
-  	_, err := c.UpsertId(p.UserID, &p)
-	if err != nil {
-		log.Println("Failed to insert/update ticket statistics!", err)
-	}
+	// //////////////////// Record Ticket Statistics ////////////////////
+	// c := session.DB("polices").C("ticketstatsdocs")
+	// var p = TicketStatsDoc{UserID: ticketInfo.UserId,
+	// 	SavedTicketCount: ticketInfo.SavedTicketCount,
+	// 	UploadedTicketCount: ticketInfo.UploadedTicketCount}
+ //  	_, err := c.UpsertId(p.UserID, &p)
+	// if err != nil {
+	// 	log.Println("Failed to insert/update ticket statistics!", err)
+	// }
 
 	//////////////////// Record Ticket to DB ////////////////////
-	c = session.DB("tickets").C("ticketdocs")
-	err = c.Insert(&TicketDoc{TicketID: ticketInfo.TicketId,
+	c := session.DB("tickets").C("ticketdocs")
+	err := c.Insert(&TicketDoc{TicketID: ticketInfo.TicketId,
 		UserID: ticketInfo.UserId,
 		LicenseNum: ticketInfo.LicenseNum,
 		LicenseColor: ticketInfo.LicenseColor,
@@ -494,7 +496,8 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 		MapImage: ticketInfo.MapImage,
 		FarImage: ticketInfo.FarImage,
 		CloseImage: ticketInfo.CloseImage,
-		TicketImage: ticketInfo.TicketImage})
+		TicketImage: ticketInfo.TicketImage,
+		IsUploaded: ticketInfo.IsUploaded})
 	if err != nil {
 		if mgo.IsDup(err) {
 			return &pb.RecordReply{RecordSuccess: false}, err
@@ -562,20 +565,6 @@ func (s *ticketServer) PullTicketRange(ctx context.Context, ticketRangeSid *pb.T
 	return &pb.TicketRange{TicketIdStart: pSid.TicketIDStart, TicketIdEnd: pSid.TicketIDEnd}, err
 }
 
-func (s *ticketServer) SubmitTicketStats(ctx context.Context, ticketStats *pb.TicketStats) (*pb.StatsReply, error) {
-	session := dbSession.Copy()
-	defer session.Close()
-	c := session.DB("polices").C("ticketstatsdocs")
-	var p = TicketStatsDoc{UserID: ticketStats.Sid,
-		SavedTicketCount: ticketStats.SavedTicketCount,
-		UploadedTicketCount: ticketStats.UploadedTicketCount}
-  	_, err := c.UpsertId(p.UserID, &p)
-	if err != nil {
-		return &pb.StatsReply{StatsSuccess: false}, err
-	}
-	return &pb.StatsReply{StatsSuccess: true}, nil
-}
-
 func (s *ticketServer) PullLocation(pullLocRequest *pb.PullLocRequest, stream pb.Ticket_PullLocationServer) error {
 	session := dbSession.Copy()
 	defer session.Close()
@@ -611,6 +600,37 @@ func (s *ticketServer) PullLocation(pullLocRequest *pb.PullLocRequest, stream pb
 	return nil
 }
 
+func (s *ticketServer) PullTicketStats(ctx context.Context, pullTicketStatsRequest *pb.PullTicketStatsRequest) (*pb.TicketStats, error) {
+	session := dbSession.Copy()
+	defer session.Close()
+	
+    var ticket_count_day_all int32 = 0
+    var ticket_count_day int32 = 0
+	var performanceDoc PerformanceDoc
+	c_day_all := session.DB("polices").C("dayallperformancedocs")
+	c_day := session.DB("polices").C("dayperformancedocs")
+
+	err := c_day_all.Find(bson.M{"userid": pullTicketStatsRequest.Sid}).One(&performanceDoc)
+	if err != nil || performanceDoc.UserID == "" {
+		// log.Println("No police performance day all: ", err)
+		ticket_count_day_all = 0
+	} else {
+		ticket_count_day_all = performanceDoc.TicketCount	
+	}
+
+	err = c_day.Find(bson.M{"userid": pullTicketStatsRequest.Sid}).One(&performanceDoc)
+	if err != nil || performanceDoc.UserID == "" {
+		// log.Println("No police performance day: ", err)
+		ticket_count_day = 0
+	} else {
+		ticket_count_day = performanceDoc.TicketCount	
+	}
+
+	return &pb.TicketStats{Sid: pullTicketStatsRequest.Sid,
+					SavedTicketCount: ticket_count_day_all,
+					UploadedTicketCount: ticket_count_day}, nil
+}
+
 func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream pb.Ticket_PullPerformanceServer) error {
 	session := dbSession.Copy()
 	defer session.Close()
@@ -623,30 +643,23 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 		return err
     }
 
-
-    var saved_ticket_count int32 = 0
-    var uploaded_ticket_count int32 = 0
+    var ticket_count_day_all int32 = 0
     var ticket_count_day int32 = 0
     var ticket_count_week int32 = 0
     var ticket_count_month int32 = 0
-
 	var performanceDoc PerformanceDoc
-	var ticketStatsDoc TicketStatsDoc
-
+	c_day_all := session.DB("polices").C("dayallperformancedocs")
 	c_day := session.DB("polices").C("dayperformancedocs")
 	c_week := session.DB("polices").C("weekperformancedocs")
 	c_month := session.DB("polices").C("monthperformancedocs")
-	c_ticket_stat := session.DB("polices").C("ticketstatsdocs")
 
 	for _, slave := range slaves {
-		err = c_ticket_stat.Find(bson.M{"userid": slave.UserID}).One(&ticketStatsDoc)
-		if err != nil || ticketStatsDoc.UserID == "" {
-			log.Println("No ticket stats: ", err)
-			saved_ticket_count = 0
-			uploaded_ticket_count = 0
+		err = c_day_all.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
+		if err != nil || performanceDoc.UserID == "" {
+			// log.Println("No police performance day all: ", err)
+			ticket_count_day_all = 0
 		} else {
-			saved_ticket_count = ticketStatsDoc.SavedTicketCount	
-			uploaded_ticket_count = ticketStatsDoc.UploadedTicketCount	
+			ticket_count_day_all = performanceDoc.TicketCount	
 		}
 
 		err = c_day.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
@@ -676,8 +689,8 @@ func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream p
 		if err := stream.Send(&pb.SlavePerformance{  Sid: slave.UserID,
 					PoliceName: slave.Name,
 					PoliceDept: slave.Dept,
-					SavedTicketCount: saved_ticket_count,
-					UploadedTicketCount: uploaded_ticket_count,
+					SavedTicketCount: ticket_count_day_all,
+					UploadedTicketCount: ticket_count_day,
 					TicketCountDay: ticket_count_day,
 					TicketCountWeek: ticket_count_week,
 					TicketCountMonth: ticket_count_month}); err != nil {
@@ -719,25 +732,6 @@ func (s *ticketServer) PullAnchors(pullAnchorRequest *pb.PullAnchorRequest, stre
 	return nil
 }
 
-func (s *ticketServer) PullTicketStats(ctx context.Context, pullTicketStatsRequest *pb.PullTicketStatsRequest) (*pb.TicketStats, error) {
-	session := dbSession.Copy()
-	defer session.Close()
-	c := session.DB("polices").C("ticketstatsdocs")
-	var ticketStatsDoc TicketStatsDoc
-	err := c.Find(bson.M{"userid": pullTicketStatsRequest.Sid}).One(&ticketStatsDoc)
-	if err != nil {
-		log.Println("Failed find ticket stats: ", err)
-		return &pb.TicketStats{SavedTicketCount: -1}, err
-	}
-	if ticketStatsDoc.UserID == "" {
-		log.Println("Police not found:!")
-		return &pb.TicketStats{SavedTicketCount: -1}, err
-	}
-	return &pb.TicketStats{  Sid: ticketStatsDoc.UserID,
-					SavedTicketCount: ticketStatsDoc.SavedTicketCount,
-					UploadedTicketCount: ticketStatsDoc.UploadedTicketCount}, nil
-}
-
 func (s *ticketServer) PullTickets(pullTicketsRequest *pb.PullTicketsRequest, stream pb.Ticket_PullTicketsServer) error {
 	session := dbSession.Copy()
 	defer session.Close()
@@ -755,7 +749,7 @@ func (s *ticketServer) PullTickets(pullTicketsRequest *pb.PullTicketsRequest, st
 	}
 
 	for _, details := range allTickets {
-		var p = pb.TicketDetails{  TicketId: details.TicketID,
+		var p = pb.TicketDetails{TicketId: details.TicketID,
 					UserId: details.UserID,
 					LicenseNum: details.LicenseNum,
 					LicenseColor: details.LicenseColor,
@@ -774,7 +768,8 @@ func (s *ticketServer) PullTickets(pullTicketsRequest *pb.PullTicketsRequest, st
 					MapImage: details.MapImage,
 					FarImage: details.FarImage,
 					CloseImage: details.CloseImage,
-					TicketImage: details.TicketImage}
+					TicketImage: details.TicketImage,
+					IsUploaded: details.IsUploaded}
 		if err := stream.Send(&p); err != nil {
 			return err
 		}

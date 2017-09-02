@@ -18,7 +18,6 @@ service Ticket {
   rpc HareChangePassword (PasswordRequest) returns (LoginReply) {}
 
   rpc RecordTicket (TicketDetails) returns (RecordReply) {}
-  rpc SubmitTicketStats (TicketStats) returns (StatsReply) {}
 
   rpc SlaveLocSubmit(SlaveLoc) returns (MasterOrder) {}
 
@@ -115,8 +114,7 @@ message TicketDetails {
   bytes far_image = 18;
   bytes close_image = 19;
   bytes ticket_image = 20;
-  int32 saved_ticket_count = 21;
-  int32 uploaded_ticket_count = 22;
+  bool is_uploaded = 21;
 }
 
 message RecordReply {
@@ -127,10 +125,6 @@ message TicketStats {
   string sid = 1;
   int32 saved_ticket_count = 2;
   int32 uploaded_ticket_count = 3;
-}
-
-message StatsReply {
-  bool stats_success = 1;
 }
 
 message PullLocRequest {
