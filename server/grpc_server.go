@@ -331,7 +331,14 @@ func (s *ticketServer) HareLogin(ctx context.Context, loginInfo *pb.LoginRequest
 		log.Println("Wrong password!")
 		return &pb.LoginReply{LoginSuccess: false}, err
 	}
-	return &pb.LoginReply{  LoginSuccess: true,
+
+	c = session.DB("polices").C("policelocdocs")
+	var slaveLoc PoliceLocDoc
+	err = c.Find(bson.M{"userid": loginInfo.UserId}).One(&slaveLoc)
+	if err == nil && slaveLoc.UserID == loginInfo.UserId && slaveLoc.Timestamp.After(time.Now().Add(-5*time.Second)) {
+		return &pb.LoginReply{LoginSuccess: false}, nil
+	}
+	return &pb.LoginReply{LoginSuccess: true,
 		PoliceName: policeDoc.Name,
 		PoliceType: policeDoc.Type,
 		PoliceCity: policeDoc.City,
