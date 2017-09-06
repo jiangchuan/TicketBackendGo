@@ -160,7 +160,7 @@ func analyzedb() {
 
 func main() {
 	analyzedb()
-	for range time.Tick(time.Hour) {
+	for range time.Tick(time.Minute) {
 		analyzedb()
 	}
 }
