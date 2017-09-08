@@ -638,13 +638,18 @@ func (s *ticketServer) PullTicketStats(ctx context.Context, pullTicketStatsReque
 					UploadedTicketCount: ticket_count_day}, nil
 }
 
-func (s *ticketServer) PullPerformance(rect *pb.PullPerformanceRequest, stream pb.Ticket_PullPerformanceServer) error {
+func (s *ticketServer) PullPerformance(pullPerformanceRequest *pb.PullPerformanceRequest, stream pb.Ticket_PullPerformanceServer) error {
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("policedocs")
 
     var slaves []PoliceDoc
-    err := c.Find(bson.M{}).All(&slaves)
+	var err error
+    if pullPerformanceRequest.PoliceDept == "全部" {
+	    err = c.Find(bson.M{}).All(&slaves)
+    } else {
+    	err = c.Find(bson.M{"dept": pullPerformanceRequest.PoliceDept}).All(&slaves)
+    }
     if err != nil {
 		log.Println("Failed to find polices: ", err)
 		return err

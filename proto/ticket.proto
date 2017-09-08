@@ -132,7 +132,7 @@ message PullLocRequest {
 }
 
 message PullPerformanceRequest {
-  string mid = 1;
+  string police_dept = 1;
 }
 
 message PullAnchorRequest {
