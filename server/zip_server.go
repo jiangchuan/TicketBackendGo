@@ -127,7 +127,8 @@ func zipDayTickets(dayName string) {
 }
 
 func updateTicker() *time.Ticker {
-	nextTick := time.Date(time.Now().Year(), time.Now().Month(), time.Now().Day(), HOUR_TO_TICK, MINUTE_TO_TICK, SECOND_TO_TICK, 0, time.Local)
+	mNow := time.Now()
+	nextTick := time.Date(mNow.Year(), mNow.Month(), mNow.Day(), HOUR_TO_TICK, MINUTE_TO_TICK, SECOND_TO_TICK, 0, time.Local)
 	if !nextTick.After(time.Now()) {
 		nextTick = nextTick.Add(INTERVAL_PERIOD)
 	}
@@ -180,7 +181,8 @@ func main() {
 	ticker := updateTicker()
     for {
 		<-ticker.C
-		folderName := fmt.Sprintf("%d-%d-%d", time.Now().Year(), int(time.Now().Month()), time.Now().Day())
+		mNow := time.Now()
+		folderName := fmt.Sprintf("%d-%d-%d", mNow.Year(), int(mNow.Month()), mNow.Day())
 
 		removeAnchors()
 		fmt.Println(time.Now(), "- just removed anchors")

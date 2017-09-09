@@ -76,6 +76,7 @@ type TicketStatsDoc struct {
 
 type PoliceLocDoc struct {
 	UserID       string      `json:"userid"`
+	Dept         string      `json:"dept"`
 	Longitude    float64     `json:"longitude"`
 	Latitude     float64     `json:"latitude"`
 	Timestamp    time.Time   `json:"timestamp"`
@@ -151,6 +152,7 @@ func (s *ticketServer) SlaveLocSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc
 	defer session.Close()
 	c := session.DB("polices").C("policelocdocs")
 	var p = PoliceLocDoc{UserID: slaveLoc.Sid,
+		Dept: slaveLoc.PoliceDept,
 		Longitude: slaveLoc.Longitude,
 		Latitude: slaveLoc.Latitude,
 		Timestamp: time.Now()}
@@ -159,9 +161,9 @@ func (s *ticketServer) SlaveLocSubmit(ctx context.Context, slaveLoc *pb.SlaveLoc
 		log.Println("Insert/update loc failed!", err)
 		return &pb.MasterOrder{MasterOrder: "Insert/update loc failed!"}, err
 	}
-	fmt.Println("Sid = " + slaveLoc.Sid)
-	fmt.Println("Longitude = %d", slaveLoc.Longitude)
-	fmt.Println("Latitude = %d", slaveLoc.Latitude)
+	// fmt.Println("Sid = " + slaveLoc.Sid)
+	// fmt.Println("Longitude = %d", slaveLoc.Longitude)
+	// fmt.Println("Latitude = %d", slaveLoc.Latitude)
 	return &pb.MasterOrder{MasterOrder: "Submit Loc Success!"}, nil
 }
 
@@ -578,7 +580,13 @@ func (s *ticketServer) PullLocation(pullLocRequest *pb.PullLocRequest, stream pb
 	c := session.DB("polices").C("policelocdocs")
 
     var slaveLocs []PoliceLocDoc
-    err := c.Find(bson.M{"timestamp": bson.M{"$gt": time.Now().Add(-time.Minute)},}).All(&slaveLocs)
+	var err error
+    if pullLocRequest.PoliceDept == "全部" {
+	    err = c.Find(bson.M{"timestamp": bson.M{"$gt": time.Now().Add(-time.Minute)},}).All(&slaveLocs)
+    } else {
+	    err = c.Find(bson.M{"dept": pullLocRequest.PoliceDept,
+	    					"timestamp": bson.M{"$gt": time.Now().Add(-time.Minute)},}).All(&slaveLocs)
+    }
     if err != nil {
 		log.Println("Failed find police locations: ", err)
 		return err
@@ -614,8 +622,8 @@ func (s *ticketServer) PullTicketStats(ctx context.Context, pullTicketStatsReque
     var ticket_count_day_all int32 = 0
     var ticket_count_day int32 = 0
 	var performanceDoc PerformanceDoc
-	c_day_all := session.DB("polices").C("dayallperformancedocs")
-	c_day := session.DB("polices").C("dayperformancedocs")
+	c_day_all := session.DB("performances").C("dayallperformancedocs")
+	c_day := session.DB("performances").C("dayperformancedocs")
 
 	err := c_day_all.Find(bson.M{"userid": pullTicketStatsRequest.Sid}).One(&performanceDoc)
 	if err != nil || performanceDoc.UserID == "" {
@@ -660,10 +668,10 @@ func (s *ticketServer) PullPerformance(pullPerformanceRequest *pb.PullPerformanc
     var ticket_count_week int32 = 0
     var ticket_count_month int32 = 0
 	var performanceDoc PerformanceDoc
-	c_day_all := session.DB("polices").C("dayallperformancedocs")
-	c_day := session.DB("polices").C("dayperformancedocs")
-	c_week := session.DB("polices").C("weekperformancedocs")
-	c_month := session.DB("polices").C("monthperformancedocs")
+	c_day_all := session.DB("performances").C("dayallperformancedocs")
+	c_day := session.DB("performances").C("dayperformancedocs")
+	c_week := session.DB("performances").C("weekperformancedocs")
+	c_month := session.DB("performances").C("monthperformancedocs")
 
 	for _, slave := range slaves {
 		err = c_day_all.Find(bson.M{"userid": slave.UserID}).One(&performanceDoc)
@@ -968,6 +976,58 @@ func ensureIndex(s *mgo.Session) {
 	}
 
 	c = session.DB("tickets").C("ticketrangedocs")
+	index = mgo.Index{
+		Key:        []string{"userid"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+		c = session.DB("performances").C("dayallperformancedocs")
+	index = mgo.Index{
+		Key:        []string{"userid"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+	c = session.DB("performances").C("dayperformancedocs")
+	index = mgo.Index{
+		Key:        []string{"userid"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+	c = session.DB("performances").C("weekperformancedocs")
+	index = mgo.Index{
+		Key:        []string{"userid"},
+		Unique:     true,
+		DropDups:   true,
+		Background: true,
+		Sparse:     true,
+	}
+	err = c.EnsureIndex(index)
+	if err != nil {
+		panic(err)
+	}
+
+	c = session.DB("performances").C("monthperformancedocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,

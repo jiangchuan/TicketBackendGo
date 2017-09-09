@@ -92,16 +92,16 @@ func main() {
 	ensureIndex(session)
 
 	//           UserID    Password  Name     Type   City   Dept                Squad      Section   PortraitPath  db         dbdocs        session
-	insertPolice("X285301", "123",   "张警官", "协警", "成都", "成都公安局交警四分局", "第一大队", "第三警区", "./portraits/p_X285301.jpg", "./portraits/t_X285301.jpg", "polices", "policedocs", session)
-	insertPolice("X285302", "123",   "王警官", "协警", "成都", "成都公安局交警四分局", "第一大队", "第三警区", "./portraits/p_X285302.jpg", "./portraits/t_X285302.jpg", "polices", "policedocs", session)
-	insertPolice("X285303", "123",   "李警官", "协警", "成都", "成都公安局交警四分局", "第一大队", "第三警区", "./portraits/p_X285303.jpg", "./portraits/t_X285303.jpg", "polices", "policedocs", session)
-	insertPolice("X285401", "123",   "赵警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第四警区", "./portraits/p_X285401.jpg", "./portraits/t_X285401.jpg", "polices", "policedocs", session)
-	insertPolice("X285402", "123",   "钱警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第四警区", "./portraits/p_X285402.jpg", "./portraits/t_X285402.jpg", "polices", "policedocs", session)
-	insertPolice("X285403", "123",   "孙警官", "协警", "成都", "成都公安局交警五分局", "第二大队", "第四警区", "./portraits/p_X285403.jpg", "./portraits/t_X285403.jpg", "polices", "policedocs", session)
+	insertPolice("X285301", "123",   "张警官", "协警", "成都", "成都公安局交警4分局", "第一大队", "第三警区", "./portraits/p_X285301.jpg", "./portraits/t_X285301.jpg", "polices", "policedocs", session)
+	insertPolice("X285302", "123",   "王警官", "协警", "成都", "成都公安局交警4分局", "第一大队", "第三警区", "./portraits/p_X285302.jpg", "./portraits/t_X285302.jpg", "polices", "policedocs", session)
+	insertPolice("X285303", "123",   "李警官", "协警", "成都", "成都公安局交警4分局", "第一大队", "第三警区", "./portraits/p_X285303.jpg", "./portraits/t_X285303.jpg", "polices", "policedocs", session)
+	insertPolice("X285401", "123",   "赵警官", "协警", "成都", "成都公安局交警5分局", "第二大队", "第四警区", "./portraits/p_X285401.jpg", "./portraits/t_X285401.jpg", "polices", "policedocs", session)
+	insertPolice("X285402", "123",   "钱警官", "协警", "成都", "成都公安局交警5分局", "第二大队", "第四警区", "./portraits/p_X285402.jpg", "./portraits/t_X285402.jpg", "polices", "policedocs", session)
+	insertPolice("X285403", "123",   "孙警官", "协警", "成都", "成都公安局交警5分局", "第二大队", "第四警区", "./portraits/p_X285403.jpg", "./portraits/t_X285403.jpg", "polices", "policedocs", session)
 
-	insertPolice("005697", "123",   "余警官", "领导", "成都", "成都公安局交警五分局", "第二大队", "大队长", "./portraits/p_005697.jpg", "./portraits/t_005697.jpg", "polices", "officerdocs", session)
+	insertPolice("005697", "123",   "余警官", "领导", "成都", "成都公安局交警5分局", "第二大队", "大队长", "./portraits/p_005697.jpg", "./portraits/t_005697.jpg", "polices", "officerdocs", session)
 
-	insertPolice("Admin", "123",   "黄江龙", "系统管理员", "成都", "成都公安局交警五分局", "第二大队", "系统管理员", "./portraits/p_Admin.jpg", "./portraits/t_Admin.jpg", "polices", "officerdocs", session)
+	insertPolice("Admin", "123",   "黄江龙", "系统管理员", "成都", "成都公安局交警5分局", "第二大队", "系统管理员", "./portraits/p_Admin.jpg", "./portraits/t_Admin.jpg", "polices", "officerdocs", session)
 
 }
 

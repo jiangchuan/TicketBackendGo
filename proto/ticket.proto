@@ -128,7 +128,7 @@ message TicketStats {
 }
 
 message PullLocRequest {
-  string mid = 1;
+  string police_dept = 1;
 }
 
 message PullPerformanceRequest {
@@ -152,8 +152,9 @@ message PullTicketsRequest {
 
 message SlaveLoc {
   string sid = 1;
-  double longitude = 2;
-  double latitude = 3;
+  string police_dept = 2;
+  double longitude = 3;
+  double latitude = 4;
 }
 
 message SlaveNameLoc {

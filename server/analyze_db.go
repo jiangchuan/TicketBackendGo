@@ -31,7 +31,7 @@ func ensureIndex(s *mgo.Session) {
 		panic(err)
 	}
 
-	c = session.DB("polices").C("dayallperformancedocs")
+	c = session.DB("performances").C("dayallperformancedocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,
@@ -44,7 +44,7 @@ func ensureIndex(s *mgo.Session) {
 		panic(err)
 	}
 
-	c = session.DB("polices").C("dayperformancedocs")
+	c = session.DB("performances").C("dayperformancedocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,
@@ -57,7 +57,7 @@ func ensureIndex(s *mgo.Session) {
 		panic(err)
 	}
 
-	c = session.DB("polices").C("weekperformancedocs")
+	c = session.DB("performances").C("weekperformancedocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,
@@ -70,7 +70,7 @@ func ensureIndex(s *mgo.Session) {
 		panic(err)
 	}
 
-	c = session.DB("polices").C("monthperformancedocs")
+	c = session.DB("performances").C("monthperformancedocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,
@@ -117,7 +117,7 @@ func analyzedb() {
 	var result PerformanceDoc
 
 	iter := pipe_day_all.Iter()
-	c = session.DB("polices").C("dayallperformancedocs")
+	c = session.DB("performances").C("dayallperformancedocs")
     for iter.Next(&result) {
     	fmt.Println(result)
 	  	_, err = c.UpsertId(result.UserID, &result)
@@ -128,7 +128,7 @@ func analyzedb() {
 
 
 	iter = pipe_day.Iter()
-	c = session.DB("polices").C("dayperformancedocs")
+	c = session.DB("performances").C("dayperformancedocs")
     for iter.Next(&result) {
     	fmt.Println(result)
 	  	_, err = c.UpsertId(result.UserID, &result)
@@ -138,7 +138,7 @@ func analyzedb() {
     }
 
 	iter = pipe_week.Iter()
-	c = session.DB("polices").C("weekperformancedocs")
+	c = session.DB("performances").C("weekperformancedocs")
     for iter.Next(&result) {
     	fmt.Println(result)
 	  	_, err = c.UpsertId(result.UserID, &result)
@@ -148,7 +148,7 @@ func analyzedb() {
     }
 
 	iter = pipe_month.Iter()
-	c = session.DB("polices").C("monthperformancedocs")
+	c = session.DB("performances").C("monthperformancedocs")
     for iter.Next(&result) {
     	fmt.Println(result)
 	  	_, err = c.UpsertId(result.UserID, &result)

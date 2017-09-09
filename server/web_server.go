@@ -29,8 +29,7 @@ func ensureIndex(s *mgo.Session) {
 	session := s.Copy()
 	defer session.Close()
 
-	// c := session.DB("polices").C("staffdocs")
-	c := session.DB("polices").C("policedocs")
+	c := session.DB("polices").C("officerdocs")
 	index := mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,
