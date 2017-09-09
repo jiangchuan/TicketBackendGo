@@ -486,7 +486,7 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 
 	//////////////////// Record Ticket to DB ////////////////////
 	c := session.DB("tickets").C("ticketdocs")
-	err := c.Insert(&TicketDoc{TicketID: ticketInfo.TicketId,
+	var p = TicketDoc{TicketID: ticketInfo.TicketId,
 		UserID: ticketInfo.UserId,
 		LicenseNum: ticketInfo.LicenseNum,
 		LicenseColor: ticketInfo.LicenseColor,
@@ -506,11 +506,9 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 		FarImage: ticketInfo.FarImage,
 		CloseImage: ticketInfo.CloseImage,
 		TicketImage: ticketInfo.TicketImage,
-		IsUploaded: ticketInfo.IsUploaded})
+		IsUploaded: ticketInfo.IsUploaded}
+  	_, err := c.UpsertId(p.TicketID, &p)
 	if err != nil {
-		if mgo.IsDup(err) {
-			return &pb.RecordReply{RecordSuccess: false}, err
-		}
 		return &pb.RecordReply{RecordSuccess: false}, err
 	}
 	return &pb.RecordReply{RecordSuccess: true}, err
