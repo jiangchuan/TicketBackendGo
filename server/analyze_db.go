@@ -101,7 +101,11 @@ func analyzedb() {
 	mNow := time.Now()
 	_, thisWeek := mNow.ISOWeek() // Mon - Sun
 
-	thisWeek = thisWeek + 1
+	if mNow.Weekday() == 0 {
+		_, thisWeek = mNow.Add(24*time.Hour).ISOWeek() // Mon - Sun
+	}
+	// fmt.Println(mNow.Weekday() == 0)
+	// fmt.Println(thisWeek)
 
 	stage_match_day_all := bson.M{"$match": bson.M{"year": mNow.Year(), "month": int(mNow.Month()), "day": mNow.Day()}}
 	stage_match_day := bson.M{"$match": bson.M{"year": mNow.Year(), "month": int(mNow.Month()), "day": mNow.Day(), "isuploaded": true}}
