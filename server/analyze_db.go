@@ -126,7 +126,6 @@ func analyzedb() {
 		}
     }
 
-
 	iter = pipe_day.Iter()
 	c = session.DB("performances").C("dayperformancedocs")
     for iter.Next(&result) {
