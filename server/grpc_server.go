@@ -715,8 +715,6 @@ func (s *ticketServer) PullPerformance(pullPerformanceRequest *pb.PullPerformanc
 			return err
 		}
 	}
-
-	log.Println("Finished PullPerformance")
 	return nil
 }
 
@@ -740,7 +738,6 @@ func (s *ticketServer) PullAnchors(pullAnchorRequest *pb.PullAnchorRequest, stre
     }
 
 	for _, slaveLoc := range slaveLocs {
-		fmt.Println("anchor entered")
 		if err = stream.Send(&pb.SlaveLoc{Sid: slaveLoc.UserID,
 				Longitude: slaveLoc.Longitude,
 				Latitude: slaveLoc.Latitude}); err != nil {

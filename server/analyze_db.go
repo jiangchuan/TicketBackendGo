@@ -99,11 +99,11 @@ func analyzedb() {
 	c := session.DB("tickets").C("ticketdocs")
 
 	mNow := time.Now()
-	_, thisWeek := mNow.ISOWeek() // Mon - Sun
+	_, thisWeek := mNow.ISOWeek() // Monday - Sunday
 
-	if mNow.Weekday() == 0 {
-		_, thisWeek = mNow.Add(24*time.Hour).ISOWeek() // Mon - Sun
-	}
+	// if mNow.Weekday() == 0 {
+	// 	_, thisWeek = mNow.Add(24*time.Hour).ISOWeek()
+	// }
 	// fmt.Println(mNow.Weekday() == 0)
 	// fmt.Println(thisWeek)
 
