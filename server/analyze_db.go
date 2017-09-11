@@ -99,7 +99,10 @@ func analyzedb() {
 	c := session.DB("tickets").C("ticketdocs")
 
 	mNow := time.Now()
-	_, thisWeek := mNow.ISOWeek()
+	_, thisWeek := mNow.ISOWeek() // Mon - Sun
+
+	thisWeek = thisWeek + 1
+
 	stage_match_day_all := bson.M{"$match": bson.M{"year": mNow.Year(), "month": int(mNow.Month()), "day": mNow.Day()}}
 	stage_match_day := bson.M{"$match": bson.M{"year": mNow.Year(), "month": int(mNow.Month()), "day": mNow.Day(), "isuploaded": true}}
 	stage_match_week := bson.M{"$match": bson.M{"year": mNow.Year(), "month": int(mNow.Month()), "week": thisWeek, "isuploaded": true}}
@@ -159,7 +162,7 @@ func analyzedb() {
 
 func main() {
 	analyzedb()
-	for range time.Tick(time.Minute) {
+	for range time.Tick(3 * time.Second) {
 		analyzedb()
 	}
 }

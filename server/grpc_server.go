@@ -580,10 +580,10 @@ func (s *ticketServer) PullLocation(pullLocRequest *pb.PullLocRequest, stream pb
     var slaveLocs []PoliceLocDoc
 	var err error
     if pullLocRequest.PoliceDept == "全部" {
-	    err = c.Find(bson.M{"timestamp": bson.M{"$gt": time.Now().Add(-time.Minute)},}).All(&slaveLocs)
+	    err = c.Find(bson.M{"timestamp": bson.M{"$gt": time.Now().Add(-10*time.Second)},}).All(&slaveLocs)
     } else {
 	    err = c.Find(bson.M{"dept": pullLocRequest.PoliceDept,
-	    					"timestamp": bson.M{"$gt": time.Now().Add(-time.Minute)},}).All(&slaveLocs)
+	    					"timestamp": bson.M{"$gt": time.Now().Add(-10*time.Second)},}).All(&slaveLocs)
     }
     if err != nil {
 		log.Println("Failed find police locations: ", err)
