@@ -6,19 +6,20 @@ import (
  "os"
  "gopkg.in/mgo.v2"
 
+ "golang.org/x/crypto/bcrypt"
 )
 
 type PoliceDoc struct {
-	UserID      string   `json:"userid"`
-	Password    string   `json:"password"`
-	Name        string   `json:"name"`
-	Type        string   `json:"type"`
-	City        string   `json:"city"`
-	Dept        string   `json:"dept"`
-	Squad       string   `json:"squad"`
-	Section     string   `json:"section"`
-	Portrait    []byte   `bson:"portrait"`
-	Thumbnail   []byte   `bson:"thumbnail"`
+	UserID         string   `json:"userid"`
+	PasswordHash   []byte   `bson:"passwordhash"`
+	Name           string   `json:"name"`
+	Type           string   `json:"type"`
+	City           string   `json:"city"`
+	Dept           string   `json:"dept"`
+	Squad          string   `json:"squad"`
+	Section        string   `json:"section"`
+	Portrait       []byte   `bson:"portrait"`
+	Thumbnail      []byte   `bson:"thumbnail"`
 }
 
 ////////// MongoDB //////////
@@ -70,8 +71,17 @@ func readFile2Bytes(filePath string) []byte {
 }
 
 func insertPolice(mUserID, mPassword, mName, mType, mCity, mDept, mSquad, mSection, mPortraitPath, mThumbnailPath, db, dbdocs string, session *mgo.Session) {
+
+    // Generate "hash" to store from user password
+    mHash, err := bcrypt.GenerateFromPassword([]byte(mPassword), bcrypt.DefaultCost)
+    if err != nil {
+		log.Println("Failed to hash password ", err)
+    }
+    fmt.Println("Hash to store: ", string(mHash))
+    // Store this "hash" somewhere, e.g. in your database
+
 	// Insert to MongoDB
-	var p = PoliceDoc{UserID: mUserID, Password: mPassword, Name: mName, Type: mType, City: mCity, Dept: mDept, Squad: mSquad, Section: mSection, Portrait: readFile2Bytes(mPortraitPath), Thumbnail: readFile2Bytes(mThumbnailPath)}
+	var p = PoliceDoc{UserID: mUserID, PasswordHash: mHash, Name: mName, Type: mType, City: mCity, Dept: mDept, Squad: mSquad, Section: mSection, Portrait: readFile2Bytes(mPortraitPath), Thumbnail: readFile2Bytes(mThumbnailPath)}
 	c := session.DB(db).C(dbdocs)
   	_, err := c.UpsertId(p.UserID, &p)
 	if err != nil {

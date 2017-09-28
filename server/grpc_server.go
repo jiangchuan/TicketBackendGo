@@ -22,6 +22,8 @@ import (
 
  "gopkg.in/mgo.v2"
  "gopkg.in/mgo.v2/bson"
+
+ "golang.org/x/crypto/bcrypt"
 )
 
 const (
@@ -56,16 +58,16 @@ type ticketServer struct {
 }
 
 type PoliceDoc struct {
-	UserID      string   `json:"userid"`
-	Password    string   `json:"password"`
-	Name        string   `json:"name"`
-	Type        string   `json:"type"`
-	City        string   `json:"city"`
-	Dept        string   `json:"dept"`
-	Squad       string   `json:"squad"`
-	Section     string   `json:"section"`
-	Portrait    []byte   `bson:"portrait"`
-	Thumbnail   []byte   `bson:"thumbnail"`
+	UserID         string   `json:"userid"`
+	PasswordHash   []byte   `bson:"passwordhash"`
+	Name           string   `json:"name"`
+	Type           string   `json:"type"`
+	City           string   `json:"city"`
+	Dept           string   `json:"dept"`
+	Squad          string   `json:"squad"`
+	Section        string   `json:"section"`
+	Portrait       []byte   `bson:"portrait"`
+	Thumbnail      []byte   `bson:"thumbnail"`
 }
 
 type TicketStatsDoc struct {
@@ -188,10 +190,15 @@ func (s *ticketServer) RhinoLogin(ctx context.Context, loginInfo *pb.LoginReques
 		log.Println("Police not found:!")
 		return &pb.LoginReply{LoginSuccess: false}, err
 	}
-	if policeDoc.Password != loginInfo.Password {
-		log.Println("Wrong password! ")
+	// if policeDoc.Password != loginInfo.Password {
+	// 	log.Println("Wrong password! ")
+	// 	return &pb.LoginReply{LoginSuccess: false}, err
+	// }
+	if err = bcrypt.CompareHashAndPassword(policeDoc.PasswordHash, []byte(loginInfo.Password)); err != nil {
+		log.Println("Wrong password ", err)
 		return &pb.LoginReply{LoginSuccess: false}, err
-	}
+    }
+
 	return &pb.LoginReply{  LoginSuccess: true,
 		PoliceName: policeDoc.Name,
 		PoliceType: policeDoc.Type,
@@ -206,8 +213,15 @@ func (s *ticketServer) RhinoCreateAccount(ctx context.Context, policeInfo *pb.Ac
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("officerdocs")
-	err := c.Insert(&PoliceDoc{UserID: policeInfo.UserId,
-		Password: policeInfo.Password,
+
+	// Generate "hash" to store from user password
+    mHash, err := bcrypt.GenerateFromPassword([]byte(policeInfo.Password), bcrypt.DefaultCost)
+    if err != nil {
+		log.Println("Failed to hash password ", err)
+		return &pb.AccountReply{CreateSuccess: false}, err
+    }
+	err = c.Insert(&PoliceDoc{UserID: policeInfo.UserId,
+		PasswordHash: mhash,
 		Name: policeInfo.PoliceName,
 		Type: policeInfo.PoliceType,
 		City: policeInfo.PoliceCity,
@@ -238,12 +252,23 @@ func (s *ticketServer) RhinoChangePassword(ctx context.Context, loginInfo *pb.Pa
 		log.Println("Police not found:!")
 		return &pb.LoginReply{LoginSuccess: false}, err
 	}
-	if policeDoc.Password != loginInfo.Password {
-		log.Println("Wrong password!")
+	// if policeDoc.Password != loginInfo.Password {
+	// 	log.Println("Wrong password!")
+	// 	return &pb.LoginReply{LoginSuccess: false}, err
+	// }
+	if err = bcrypt.CompareHashAndPassword(policeDoc.PasswordHash, []byte(loginInfo.Password)); err != nil {
+		log.Println("Wrong password ", err)
 		return &pb.LoginReply{LoginSuccess: false}, err
-	}
+    }
+
 	// Update password
-	err = c.Update(bson.M{"userid": loginInfo.UserId}, bson.M{"$set": bson.M{"password": loginInfo.NewPassword}})
+	// Generate "hash" to store from user password
+    mHash, err := bcrypt.GenerateFromPassword([]byte(loginInfo.NewPassword), bcrypt.DefaultCost)
+    if err != nil {
+		log.Println("Failed to hash password ", err)
+		return &pb.LoginReply{LoginSuccess: false}, err
+    }
+	err = c.Update(bson.M{"userid": loginInfo.UserId}, bson.M{"$set": bson.M{"passwordhash": mHash}})
 	if err != nil {
 		log.Println("Failed to change password: ", err)
 		return &pb.LoginReply{LoginSuccess: false}, err
@@ -329,10 +354,14 @@ func (s *ticketServer) HareLogin(ctx context.Context, loginInfo *pb.LoginRequest
 		log.Println("Police not found:!")
 		return &pb.LoginReply{LoginSuccess: false}, err
 	}
-	if policeDoc.Password != loginInfo.Password {
-		log.Println("Wrong password!")
+	// if policeDoc.Password != loginInfo.Password {
+	// 	log.Println("Wrong password!")
+	// 	return &pb.LoginReply{LoginSuccess: false}, err
+	// }
+	if err = bcrypt.CompareHashAndPassword(policeDoc.PasswordHash, []byte(loginInfo.Password)); err != nil {
+		log.Println("Wrong password ", err)
 		return &pb.LoginReply{LoginSuccess: false}, err
-	}
+    }
 
 	c = session.DB("polices").C("policelocdocs")
 	var slaveLoc PoliceLocDoc
@@ -366,8 +395,15 @@ func (s *ticketServer) HareCreateAccount(ctx context.Context, policeInfo *pb.Acc
 	session := dbSession.Copy()
 	defer session.Close()
 	c := session.DB("polices").C("policedocs")
-	err := c.Insert(&PoliceDoc{UserID: policeInfo.UserId,
-		Password: policeInfo.Password,
+
+	// Generate "hash" to store from user password
+    mHash, err := bcrypt.GenerateFromPassword([]byte(policeInfo.Password), bcrypt.DefaultCost)
+    if err != nil {
+		log.Println("Failed to hash password ", err)
+		return &pb.AccountReply{CreateSuccess: false}, err
+    }
+	err = c.Insert(&PoliceDoc{UserID: policeInfo.UserId,
+		PasswordHash: mHash,
 		Name: policeInfo.PoliceName,
 		Type: policeInfo.PoliceType,
 		City: policeInfo.PoliceCity,
@@ -398,12 +434,23 @@ func (s *ticketServer) HareChangePassword(ctx context.Context, loginInfo *pb.Pas
 		log.Println("Police not found:!")
 		return &pb.LoginReply{LoginSuccess: false}, err
 	}
-	if policeDoc.Password != loginInfo.Password {
-		log.Println("Wrong password!")
+	// if policeDoc.Password != loginInfo.Password {
+	// 	log.Println("Wrong password!")
+	// 	return &pb.LoginReply{LoginSuccess: false}, err
+	// }
+	if err = bcrypt.CompareHashAndPassword(policeDoc.PasswordHash, []byte(loginInfo.Password)); err != nil {
+		log.Println("Wrong password ", err)
 		return &pb.LoginReply{LoginSuccess: false}, err
-	}
+    }
+
 	// Update password
-	err = c.Update(bson.M{"userid": loginInfo.UserId}, bson.M{"$set": bson.M{"password": loginInfo.NewPassword}})
+	// Generate "hash" to store from user password
+    mHash, err := bcrypt.GenerateFromPassword([]byte(loginInfo.NewPassword), bcrypt.DefaultCost)
+    if err != nil {
+		log.Println("Failed to hash password ", err)
+		return &pb.LoginReply{LoginSuccess: false}, err
+    }
+	err = c.Update(bson.M{"userid": loginInfo.UserId}, bson.M{"$set": bson.M{"passwordhash": mHash}})
 	if err != nil {
 		log.Println("Failed to change password: ", err)
 		return &pb.LoginReply{LoginSuccess: false}, err
