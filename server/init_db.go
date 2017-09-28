@@ -71,14 +71,11 @@ func readFile2Bytes(filePath string) []byte {
 }
 
 func insertPolice(mUserID, mPassword, mName, mType, mCity, mDept, mSquad, mSection, mPortraitPath, mThumbnailPath, db, dbdocs string, session *mgo.Session) {
-
     // Generate "hash" to store from user password
     mHash, err := bcrypt.GenerateFromPassword([]byte(mPassword), bcrypt.DefaultCost)
     if err != nil {
 		log.Println("Failed to hash password ", err)
     }
-    // fmt.Println("Hash to store: ", string(mHash))
-    // Store this "hash" somewhere, e.g. in your database
 
 	// Insert to MongoDB
 	var p = PoliceDoc{UserID: mUserID, PasswordHash: mHash, Name: mName, Type: mType, City: mCity, Dept: mDept, Squad: mSquad, Section: mSection, Portrait: readFile2Bytes(mPortraitPath), Thumbnail: readFile2Bytes(mThumbnailPath)}

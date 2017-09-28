@@ -10,19 +10,24 @@ import (
 
 	"gopkg.in/mgo.v2"
     "gopkg.in/mgo.v2/bson"
+
+    "golang.org/x/crypto/bcrypt"
 )
 
 ////////// MongoDB //////////
 var dbSession *mgo.Session
 
 type PoliceDoc struct {
-	UserID      string   `json:"userid"`
-	Password    string   `json:"password"`
-	Name        string   `json:"name"`
-	Type        string   `json:"type"`
-	City        string   `json:"city"`
-	Dept        string   `json:"dept"`
-	Station     string   `json:"station"`
+	UserID         string   `json:"userid"`
+	PasswordHash   []byte   `bson:"passwordhash"`
+	Name           string   `json:"name"`
+	Type           string   `json:"type"`
+	City           string   `json:"city"`
+	Dept           string   `json:"dept"`
+	Squad          string   `json:"squad"`
+	Section        string   `json:"section"`
+	Portrait       []byte   `bson:"portrait"`
+	Thumbnail      []byte   `bson:"thumbnail"`
 }
 
 func ensureIndex(s *mgo.Session) {  
@@ -85,10 +90,15 @@ func myAuthFunc(user, pass string, r *http.Request) bool {
 		log.Println("Police not found:!")
 		return false	
 	}
-	if policeDoc.Password != pass {
-		log.Println("Wrong password! ")
+	// if policeDoc.Password != pass {
+	// 	log.Println("Wrong password! ")
+	// 	return false
+	// }
+	if err = bcrypt.CompareHashAndPassword(policeDoc.PasswordHash, []byte(pass)); err != nil {
+		log.Println("Wrong password ", err)
 		return false
-	}
+    }
+
 	return true
     // return pass == strings.Repeat(user, 3)
 }
