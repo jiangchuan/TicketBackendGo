@@ -221,7 +221,7 @@ func (s *ticketServer) RhinoCreateAccount(ctx context.Context, policeInfo *pb.Ac
 		return &pb.AccountReply{CreateSuccess: false}, err
     }
 	err = c.Insert(&PoliceDoc{UserID: policeInfo.UserId,
-		PasswordHash: mhash,
+		PasswordHash: mHash,
 		Name: policeInfo.PoliceName,
 		Type: policeInfo.PoliceType,
 		City: policeInfo.PoliceCity,

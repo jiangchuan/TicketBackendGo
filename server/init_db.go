@@ -77,13 +77,13 @@ func insertPolice(mUserID, mPassword, mName, mType, mCity, mDept, mSquad, mSecti
     if err != nil {
 		log.Println("Failed to hash password ", err)
     }
-    fmt.Println("Hash to store: ", string(mHash))
+    // fmt.Println("Hash to store: ", string(mHash))
     // Store this "hash" somewhere, e.g. in your database
 
 	// Insert to MongoDB
 	var p = PoliceDoc{UserID: mUserID, PasswordHash: mHash, Name: mName, Type: mType, City: mCity, Dept: mDept, Squad: mSquad, Section: mSection, Portrait: readFile2Bytes(mPortraitPath), Thumbnail: readFile2Bytes(mThumbnailPath)}
 	c := session.DB(db).C(dbdocs)
-  	_, err := c.UpsertId(p.UserID, &p)
+  	_, err = c.UpsertId(p.UserID, &p)
 	if err != nil {
 		log.Println("Failed to insert or update record: ", err)
 	}
