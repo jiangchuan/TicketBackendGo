@@ -32,6 +32,9 @@ service Ticket {
 
   rpc HareLogout(LogoutRequest) returns (LogoutReply) {}
 
+
+  rpc RecordScan(stream ScanInfo) returns (ScanSummary) {}
+
 }
 
 message AccountRequest {
@@ -217,3 +220,21 @@ message LogoutRequest {
 message LogoutReply {
   bool logout_success = 1;
 }
+
+message ScanInfo {
+  string user_id = 1;
+  string license_num = 2;
+  string license_color = 3;
+  string vehicle_type = 4;
+  string vehicle_color = 5;
+  int64 scan_time = 6;
+  string address = 7;
+  double longitude = 8;
+  double latitude = 9;
+  bytes far_image = 10;
+}
+
+message ScanSummary {
+  bool scan_success = 1;
+}
+

@@ -2,6 +2,7 @@ package main
 
 import (
  "flag"
+ "io"
  "fmt"
  "log"
  "os"
@@ -41,8 +42,8 @@ const (
 
 var (
 	tls        = flag.Bool("tls", false, "Connection uses TLS if true, else plain TCP")
-	certFile   = flag.String("cert_file", "testdata/server1.pem", "The TLS cert file")
-	keyFile    = flag.String("key_file", "testdata/server1.key", "The TLS key file")
+	certFile   = flag.String("cert_file", "testdata/server.pem", "The TLS cert file")
+	keyFile    = flag.String("key_file", "testdata/server.key", "The TLS key file")
 	jsonDBFile = flag.String("json_db_file", "testdata/route_guide_db.json", "A json file containing a list of features")
 	port       = flag.Int("port", 50051, "The server port")
 )
@@ -137,6 +138,19 @@ type TicketRangeDoc struct {
 	UserID           string    `json:"userid"`
 	TicketIDStart    int64     `json:"ticketidstart"`
 	TicketIDEnd      int64     `json:"ticketidend"`
+}
+
+type ScanDoc struct {
+	UserID          string    `json:"userid"`
+	LicenseNum      string    `json:"licensenum"`
+	LicenseColor    string    `json:"licensecolor"`
+	VehicleType     string    `json:"vehicletype"`
+	VehicleColor    string    `json:"vehiclecolor"`
+	ScanTime        int64     `json:"scantime"`
+	Address         string    `json:"address"`
+	Longitude       float64   `json:"longitude"`
+	Latitude        float64   `json:"latitude"`
+	FarImage        []byte    `bson:"farimage"`
 }
 
 type PerformanceDoc struct {
@@ -496,7 +510,6 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 		writeImage(imgPath, ticketInfo.TicketImage)
 	}
 
-
 	//////////////////// Record Lat-Lon Anchors ////////////////////
 	session := dbSession.Copy()
 	defer session.Close()
@@ -560,6 +573,39 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 	}
 	return &pb.RecordReply{RecordSuccess: true}, err
 }
+
+func (s *ticketServer) RecordScan(stream pb.Ticket_RecordScanServer) error {
+	session := dbSession.Copy()
+	defer session.Close()
+	c := session.DB("scans").C("scandocs")
+	for {
+		scanInfo, err := stream.Recv()
+		if err == io.EOF {
+			return stream.SendAndClose(&pb.ScanSummary{
+				ScanSuccess:   true,
+			})
+		}
+		if err != nil {
+			return err
+		}
+
+		var p = ScanDoc{UserID: scanInfo.UserId,
+			LicenseNum: scanInfo.LicenseNum,
+			LicenseColor: scanInfo.LicenseColor,
+			VehicleType: scanInfo.VehicleType,
+			VehicleColor: scanInfo.VehicleColor,
+			ScanTime: scanInfo.ScanTime,
+			Address: scanInfo.Address,
+			Longitude: scanInfo.Longitude,
+			Latitude: scanInfo.Latitude,
+			FarImage: scanInfo.FarImage}
+	  	err = c.Insert(&p)
+		if err != nil {
+			log.Println("Insert/update scan failed!", err)
+		}
+	}
+}
+
 
 func (s *ticketServer) SetTicketRange(ctx context.Context, ticketRange *pb.TicketRange) (*pb.TicketRangeReply, error) {
 	session := dbSession.Copy()
@@ -1030,7 +1076,20 @@ func ensureIndex(s *mgo.Session) {
 		panic(err)
 	}
 
-		c = session.DB("performances").C("dayallperformancedocs")
+	// c = session.DB("scans").C("scandocs")
+	// index = mgo.Index{
+	// 	Key:        []string{"scanid"},
+	// 	Unique:     true,
+	// 	DropDups:   true,
+	// 	Background: true,
+	// 	Sparse:     true,
+	// }
+	// err = c.EnsureIndex(index)
+	// if err != nil {
+	// 	panic(err)
+	// }
+
+	c = session.DB("performances").C("dayallperformancedocs")
 	index = mgo.Index{
 		Key:        []string{"userid"},
 		Unique:     true,
