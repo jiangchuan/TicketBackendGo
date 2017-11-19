@@ -490,7 +490,7 @@ func (s *ticketServer) RecordTicket(ctx context.Context, ticketInfo *pb.TicketDe
 
 		// Write ticket.txt
 		ticketPath := fmt.Sprintf("%s/ticket_%d.txt", directoryPath, ticketInfo.TicketId)
-		ticketContent := fmt.Sprintf("罚单编号: %d\n车辆牌号: %s\n车身颜色: %s\n车辆类型: %s\n号牌颜色: %s\n停车时间: %d年%d月%d日%d时%d分\n停车地点: %s", 
+		ticketContent := fmt.Sprintf("罚单编号: %d\n车辆牌号: %s\n车身颜色: %s\n车辆类型: %s\n号牌颜色: %s\n停车时间: %d年%d月%d日%d时%d分\n违停地点: %s", 
 				ticketInfo.TicketId, ticketInfo.LicenseNum, ticketInfo.VehicleColor, ticketInfo.VehicleType, ticketInfo.LicenseColor,
 				ticketInfo.Year, ticketInfo.Month, ticketInfo.Day, ticketInfo.Hour, ticketInfo.Minute, ticketInfo.Address)
 		createFile(ticketPath)
@@ -589,6 +589,26 @@ func (s *ticketServer) RecordScan(stream pb.Ticket_RecordScanServer) error {
 			return err
 		}
 
+		// Write scan info to disk
+		dayName := fmt.Sprintf("%d-%d-%d", scanInfo.Year, scanInfo.Month, scanInfo.Day)
+		timeNumName := fmt.Sprintf("%d-%d_%s_%d", scanInfo.Hour, scanInfo.Minute, scanInfo.UserId, scanInfo.ScanTime)
+		directoryPath := fmt.Sprintf("./scans/%s/%s_%s", dayName, dayName, timeNumName)
+		createDirectory(directoryPath)
+
+		// Write scan.txt
+		ticketPath := fmt.Sprintf("%s/scan_%s_%d.txt", directoryPath, scanInfo.UserId, scanInfo.ScanTime)
+		ticketContent := fmt.Sprintf("警察编号: %s\n车辆牌号: %s\n扫描时间: %d年%d月%d日%d时%d分\n违停地点: %s", 
+				scanInfo.UserId, scanInfo.LicenseNum,
+				scanInfo.Year, scanInfo.Month, scanInfo.Day, scanInfo.Hour, scanInfo.Minute, scanInfo.Address)
+		createFile(ticketPath)
+		writeFile(ticketPath, ticketContent)
+
+		// Write img.jpg
+		imgPath := fmt.Sprintf("%s/scan_image_%s_%d.jpg", directoryPath, scanInfo.UserId, scanInfo.ScanTime)
+		createFile(imgPath)
+		writeImage(imgPath, scanInfo.FarImage)
+
+		// Save scan info to DB
 		var p = ScanDoc{UserID: scanInfo.UserId,
 			LicenseNum: scanInfo.LicenseNum,
 			LicenseColor: scanInfo.LicenseColor,
